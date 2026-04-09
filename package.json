@@ -1,0 +1,10 @@
+{
+  "name": "srinath-finance-dashboard",
+  "version": "1.0.0",
+  "description": "Personal Finance Dashboard - FY 2026-27",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve public",
+    "build": "echo 'Static site - no build needed'"
+  }
+}

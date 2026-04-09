@@ -1,0 +1,5792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Srinath's Personal Finance Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #faf8f4; --surface: #ffffff; --card: #ffffff;
+  --accent: #9a7b4f; --gold: #c4a265; --gold-light: #f5f0e6;
+  --gold-dark: #7a5c2e; --gold-glow: rgba(196,162,101,.2);
+  --charcoal: #2c2c2c; --slate: #3d3d3d;
+  --green: #2e7d5b; --red: #a63d3d;
+  --yellow: #b8963a; --purple: #7c6cb0; --orange: #c47d2e;
+  --emerald: #3a8f6e; --burgundy: #8b3a3a;
+  --text: #1e1e1e; --text-secondary: #4a4540; --muted: #8c857c; --border: #e8e2d8;
+  --shadow-sm: 0 1px 4px rgba(30,20,10,.04);
+  --shadow: 0 4px 24px rgba(30,20,10,.06);
+  --shadow-lg: 0 12px 48px rgba(30,20,10,.09);
+  --gold-gradient: linear-gradient(135deg, #9a7b4f 0%, #c4a265 40%, #d4b87a 100%);
+  --header-gradient: linear-gradient(160deg, #1a1a1a 0%, #2a2622 50%, #1e1c18 100%);
+  --radius: 14px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{overflow-x:hidden;scroll-behavior:smooth}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7;overflow-x:hidden;max-width:100vw;cursor:default;-webkit-font-smoothing:antialiased}
+
+/* ═══ CURSOR & RIPPLE ═══ */
+*{cursor:default}
+a,button,.tab,.stat-box[data-tab],.card[data-tab],.kpi[data-tab],.upload-btn,.budget-item[data-tab]{cursor:pointer}
+.ripple-container{position:relative;overflow:hidden}
+.ripple{position:absolute;border-radius:50%;background:var(--gold-glow);transform:scale(0);animation:rippleAnim .6s ease-out forwards;pointer-events:none;z-index:1}
+@keyframes rippleAnim{to{transform:scale(4);opacity:0}}
+
+/* ═══ HEADER ═══ */
+.header{background:var(--header-gradient);padding:26px 40px;border-bottom:none;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;position:relative}
+.header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold-gradient);opacity:.8}
+.header h1{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:600;color:#efe6d5;letter-spacing:2px;text-shadow:0 1px 6px rgba(0,0,0,.25)}
+.header p{color:#9e9385;font-size:13px;font-weight:400;letter-spacing:0.8px;font-family:'DM Sans',sans-serif}
+.header-actions{display:flex;gap:12px;align-items:center}
+.upload-btn{background:var(--gold-gradient);color:#1e1c18;border:none;padding:10px 24px;border-radius:8px;font-weight:600;cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:6px;transition:all .3s cubic-bezier(.4,0,.2,1);box-shadow:0 2px 10px rgba(154,123,79,.3);letter-spacing:0.5px;text-transform:uppercase}
+.upload-btn:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 6px 20px rgba(154,123,79,.4)}
+.upload-btn:active{transform:translateY(0) scale(.98)}
+#fileInput{display:none}
+.status-badge{display:flex;align-items:center;gap:6px;font-size:11px;color:#9e9385;background:rgba(255,255,255,.05);padding:7px 14px;border-radius:6px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.06);font-family:'DM Sans',sans-serif;letter-spacing:0.3px}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.status-dot.loaded{background:var(--emerald);box-shadow:0 0 6px rgba(58,143,110,.4)}
+.status-dot.empty{background:var(--yellow)}
+
+/* ═══ TABS ═══ */
+.tabs{display:flex;background:#1e1c18;padding:0 28px;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.tabs::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 5%,var(--gold) 50%,transparent 95%);opacity:.4}
+.tab{padding:14px 18px;cursor:pointer;color:#706b63;font-weight:500;font-size:11px;border-bottom:2px solid transparent;transition:all .3s cubic-bezier(.4,0,.2,1);white-space:nowrap;letter-spacing:1.2px;text-transform:uppercase;font-family:'DM Sans',sans-serif;position:relative;overflow:hidden}
+.tab:hover{color:#d4c4a8;background:rgba(196,162,101,.05)}
+.tab.active{color:#d4b87a;border-bottom-color:#c4a265;font-weight:600}
+
+/* ═══ LAYOUT ═══ */
+.container{padding:28px;max-width:1600px;margin:0 auto}
+.content{display:none;animation:slideUp .4s cubic-bezier(.4,0,.2,1)}
+.content.active{display:block}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══ CARDS ═══ */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:28px;margin-bottom:20px;transition:all .4s cubic-bezier(.4,0,.2,1);box-shadow:var(--shadow);position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold-gradient);opacity:0;transition:opacity .4s}
+.card:hover{border-color:rgba(196,162,101,.4);box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.card:hover::before{opacity:.7}
+.card[data-tab]{cursor:pointer}
+.card[data-tab]:hover{transform:translateY(-3px)}
+.card[data-tab]::after{content:'→';position:absolute;top:24px;right:24px;color:var(--gold);font-size:16px;opacity:0;transition:all .3s;transform:translateX(-8px);font-family:'DM Sans',sans-serif}
+.card[data-tab]:hover::after{opacity:.6;transform:translateX(0)}
+.card h2{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;text-transform:uppercase;letter-spacing:2px;margin-bottom:20px;color:var(--text);border-bottom:1px solid var(--border);padding-bottom:12px;position:relative}
+.card h2::after{content:'';position:absolute;bottom:-1px;left:0;width:40px;height:2px;background:var(--gold)}
+.card h3{font-size:13px;font-weight:600;margin-bottom:8px;margin-top:14px;color:var(--text);font-family:'DM Sans',sans-serif;letter-spacing:0.3px}
+.card .val{font-size:26px;font-weight:700;color:var(--accent);margin:8px 0;font-family:'DM Sans',sans-serif}
+.card .sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+.sub-currency{color:var(--muted);font-size:0.75em;margin-left:6px;font-weight:400}
+
+/* ═══ GRIDS ═══ */
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:24px}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+
+/* ═══ STAT BOXES (Clickable) ═══ */
+.stat-box{background:linear-gradient(135deg,#faf7f0,#f5f0e6);border-left:3px solid var(--gold);padding:16px 20px;border-radius:8px;margin:10px 0;transition:all .35s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;border:1px solid transparent}
+.stat-box:hover{background:linear-gradient(135deg,#f5eed8,#ede4cc);border-left-color:var(--accent);transform:translateX(4px);box-shadow:0 3px 16px rgba(154,123,79,.1);border-color:rgba(196,162,101,.2)}
+.stat-box[data-tab]{cursor:pointer}
+.stat-box[data-tab]::after{content:'›';position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:22px;opacity:0;transition:all .3s;font-weight:300}
+.stat-box[data-tab]:hover::after{opacity:.5;right:12px}
+.stat-box label{font-size:10px;color:var(--muted);text-transform:uppercase;display:block;letter-spacing:1.2px;font-weight:500;font-family:'DM Sans',sans-serif}
+.stat-box .amount{font-size:20px;font-weight:700;color:var(--text);margin-top:6px;font-family:'DM Sans',sans-serif;letter-spacing:-0.3px}
+
+/* ═══ PROGRESS ═══ */
+.progress-bar{background:#e7e0d5;border-radius:6px;height:8px;margin:8px 0;overflow:hidden}
+.progress-fill{background:var(--gold-gradient);height:100%;border-radius:6px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* ═══ TABLES ═══ */
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;font-family:'DM Sans',sans-serif;border-radius:8px;overflow:hidden}
+table th{background:linear-gradient(135deg,#2a2622,#1e1c18);color:#d4b87a;padding:13px 16px;text-align:left;font-weight:500;letter-spacing:0.8px;font-size:10px;text-transform:uppercase;position:sticky;top:0}
+table th:first-child{border-radius:8px 0 0 0}
+table th:last-child{border-radius:0 8px 0 0}
+table td{padding:12px 16px;border-bottom:1px solid #f2ede5;color:var(--text-secondary);transition:all .2s;font-size:12px}
+table tr{transition:all .25s}
+table tr:nth-child(even){background:rgba(250,248,244,.5)}
+table tr:hover{background:linear-gradient(90deg,#f5f0e6,#faf7f0);transform:scale(1.001)}
+table tr:hover td{color:var(--text)}
+
+/* ═══ CHARTS ═══ */
+.chart-container{position:relative;height:300px;margin:16px 0}
+.chart-wrap{position:relative;height:280px}
+
+/* ═══ BUDGET ITEMS ═══ */
+.budget-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f0ebe3;transition:all .2s}
+.budget-item:hover{padding-left:8px;background:rgba(201,168,76,.04);border-radius:4px}
+.budget-item[data-tab]{cursor:pointer}
+.budget-item label{flex:1;font-size:13px;color:var(--text-secondary);font-weight:500}
+.budget-item .val{font-weight:700;color:var(--accent);font-family:'DM Sans',sans-serif}
+
+/* ═══ ALERTS ═══ */
+.alert{padding:14px 18px;border-radius:8px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500}
+.alert.warning{background:#fef9ef;border-left:3px solid var(--yellow);color:#92690a}
+.alert.success{background:#f0f9f3;border-left:3px solid var(--green);color:var(--green)}
+.alert.danger{background:#fef2f2;border-left:3px solid var(--red);color:var(--red)}
+
+/* ═══ KPIs ═══ */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:16px 0}
+.kpi{background:linear-gradient(135deg,#faf7f0,#f5f0e6);border:1px solid var(--border);padding:18px;border-radius:12px;text-align:center;box-shadow:var(--shadow-sm);transition:all .35s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold-gradient);opacity:0;transition:opacity .3s}
+.kpi:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:rgba(196,162,101,.3)}
+.kpi:hover::before{opacity:1}
+.kpi[data-tab]{cursor:pointer}
+.kpi-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;font-weight:500}
+.kpi-value{font-size:21px;font-weight:700;color:var(--text);margin-top:6px;font-family:'DM Sans',sans-serif;letter-spacing:-0.3px}
+
+/* ═══ NUMBERS (Monospace) ═══ */
+.mono{font-family:'JetBrains Mono',monospace;font-size:0.95em}
+
+/* ═══ SCROLL ═══ */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--gold);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+
+/* ═══ SELECTION ═══ */
+::selection{background:var(--gold-light);color:var(--text)}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+  .header{flex-direction:column;align-items:flex-start;padding:18px 20px}
+  .header h1{font-size:22px}
+  .grid-2{grid-template-columns:1fr}
+  .tabs{padding:0 12px}
+  .tab{padding:10px 12px;font-size:10px}
+  .container{padding:16px}
+  .card{padding:16px;border-radius:10px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>💰 Personal Finance Dashboard</h1>
+    <p>Srinath's wealth tracker (AED + INR)</p>
+  </div>
+  <div class="header-actions">
+    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+      📤 Upload Excel
+    </button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileUpload(event)">
+    <div id="xrDisplay" class="status-badge">💱 1 AED = ₹25.00 <span style="font-size:10px;opacity:0.7">Loading...</span></div>
+    <div class="status-badge">
+      <span class="status-dot loaded"></span>
+      <span>Data Loaded</span>
+    </div>
+  </div>
+</div>
+
+<div class="tabs" id="tabBar">
+  <div class="tab active" onclick="switchTab('overview')">Overview</div>
+  <div class="tab" onclick="switchTab('budget')">Budget</div>
+  <div class="tab" onclick="switchTab('networth')">Net Worth</div>
+  <div class="tab" onclick="switchTab('stocks')">India Stocks</div>
+  <div class="tab" onclick="switchTab('mutualfunds')">Mutual Funds</div>
+  <div class="tab" onclick="switchTab('usstocks')">US Stocks</div>
+  <div class="tab" onclick="switchTab('equity')">Company Equity</div>
+  <div class="tab" onclick="switchTab('property')">Property</div>
+  <div class="tab" onclick="switchTab('investments')">Investments</div>
+  <div class="tab" onclick="switchTab('goals')">Goals</div>
+  <div class="tab" onclick="switchTab('loans')">Loans</div>
+  <div class="tab" onclick="switchTab('insurance')">Insurance</div>
+  <div class="tab" onclick="switchTab('tax')">Tax</div>
+  <div class="tab" onclick="switchTab('emergency')">Emergency</div>
+  <div class="tab" onclick="switchTab('simulator')">Simulator</div>
+  <div class="tab" onclick="switchTab('monthly')">Monthly</div>
+  <div class="tab" onclick="switchTab('action')">Action Plan</div>
+</div>
+
+<div class="container">
+
+<!-- OVERVIEW TAB -->
+<div id="overview" class="content active">
+  <div class="grid-2">
+    <div class="card" data-tab="budget">
+      <h2>Monthly Snapshot</h2>
+      <div class="stat-box" data-tab="budget">
+        <label>Annual Income</label>
+        <div class="amount" id="overviewIncome"></div>
+      </div>
+      <div class="stat-box" data-tab="budget">
+        <label>Annual Expenses</label>
+        <div class="amount" id="overviewExpenses"></div>
+      </div>
+      <div class="stat-box" data-tab="investments">
+        <label>Annual Savings</label>
+        <div class="amount" id="overviewSavings"></div>
+      </div>
+      <div class="stat-box" data-tab="budget">
+        <label>Savings Rate</label>
+        <div class="amount" id="overviewSavingsRate"></div>
+      </div>
+    </div>
+    <div class="card" data-tab="networth">
+      <h2>Net Worth</h2>
+      <div class="stat-box" data-tab="networth">
+        <label>Total Assets</label>
+        <div class="amount" id="overviewAssets"></div>
+      </div>
+      <div class="stat-box" data-tab="loans">
+        <label>Total Liabilities</label>
+        <div class="amount" id="overviewLiabilities"></div>
+      </div>
+      <div class="stat-box" data-tab="networth">
+        <label>Net Worth</label>
+        <div class="amount" id="overviewNetWorth"></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Asset Allocation</h2>
+      <div class="chart-container"><canvas id="chAllocation"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Monthly Free Cash</h2>
+      <div class="chart-container"><canvas id="chAssetClass"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Cash Balance (Running)</h2>
+    <div class="grid-3">
+      <div class="stat-box" style="border-left-color:var(--green)">
+        <label>FY Opening (Apr)</label>
+        <div class="amount" id="cashOpening"></div>
+      </div>
+      <div class="stat-box" style="border-left-color:var(--yellow)">
+        <label>Current Month</label>
+        <div class="amount" id="cashCurrent"></div>
+      </div>
+      <div class="stat-box" style="border-left-color:var(--accent)">
+        <label>FY Closing (Mar)</label>
+        <div class="amount" id="cashClosing"></div>
+      </div>
+    </div>
+    <div class="chart-container"><canvas id="chCashBalance"></canvas></div>
+  </div>
+</div>
+
+<!-- BUDGET TAB -->
+<div id="budget" class="content">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Income Allocation (4 Buckets)</h2>
+      <div id="bucketAllocation"></div>
+      <div class="chart-container" style="height:250px"><canvas id="chBucketPie"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Expense Categories</h2>
+      <div id="expenseBreakdown"></div>
+      <div class="chart-container" style="height:250px"><canvas id="chExpenseCat"></canvas></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Monthly Spending (% of Income)</h2>
+    <div class="chart-container"><canvas id="chBudgetTimeline"></canvas></div>
+  </div>
+</div>
+
+<!-- NET WORTH TAB -->
+<div id="networth" class="content">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Assets Summary</h2>
+      <div id="assetsTable"></div>
+    </div>
+    <div class="card">
+      <h2>Liabilities Summary</h2>
+      <div id="liabilitiesTable"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Asset Allocation</h2>
+    <div class="chart-container"><canvas id="chNetWorth"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>Net Worth Trend</h2>
+    <div id="netWorthTrend"></div>
+  </div>
+</div>
+
+<!-- INDIA STOCKS TAB -->
+<div id="stocks" class="content">
+  <div class="card">
+    <h2>India Equity Portfolio</h2>
+    <div id="indiaStocksHeader"></div>
+    <div id="indiaStocksTable" style="overflow-x:auto;margin-top:12px"></div>
+    <div class="grid-2" style="margin-top:20px">
+      <div class="chart-container"><canvas id="chStockAlloc"></canvas></div>
+      <div class="chart-container"><canvas id="chSectorAlloc"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- MUTUAL FUNDS TAB -->
+<div id="mutualfunds" class="content">
+  <div class="card">
+    <h2>Mutual Fund Portfolio</h2>
+    <div id="mfHeader"></div>
+  </div>
+  <div class="grid-2">
+    <div class="card"><h3>Category Allocation</h3><div class="chart-wrap"><canvas id="chMFAlloc"></canvas></div></div>
+    <div class="card"><h3>Fund-wise Value</h3><div class="chart-wrap"><canvas id="chMFValue"></canvas></div></div>
+  </div>
+  <div class="card">
+    <h3>All Mutual Funds</h3>
+    <div class="tbl-wrap" id="mfTable"></div>
+  </div>
+</div>
+
+<!-- US STOCKS TAB -->
+<div id="usstocks" class="content">
+  <div class="card">
+    <h2>US Equity Portfolio</h2>
+    <div id="usStocksHeader"></div>
+    <div id="usStocksTable" style="overflow-x:auto;margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- COMPANY EQUITY TAB -->
+<div id="equity" class="content">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Company Equity Summary</h2>
+      <div id="equitySummary"></div>
+    </div>
+    <div class="card">
+      <h2>CCPS Holdings</h2>
+      <div id="ccpsDetails"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Stock Appreciation Rights (SARs)</h2>
+    <div id="sarsTable" style="overflow-x:auto;margin-top:12px"></div>
+  </div>
+  <div class="card">
+    <h2>Vesting Timeline & Status</h2>
+    <div id="vestingTimeline"></div>
+  </div>
+</div>
+
+<!-- PROPERTY TAB -->
+<div id="property" class="content">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Property Overview</h2>
+      <div id="propertyOverview"></div>
+    </div>
+    <div class="card">
+      <h2>Investment Performance</h2>
+      <div id="propertyPerformance"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Loan vs Equity</h2>
+    <div class="grid-2">
+      <div class="chart-container"><canvas id="chPropertyLoan"></canvas></div>
+      <div id="loanEquityBreakdown"></div>
+    </div>
+  </div>
+</div>
+
+<!-- INVESTMENTS TAB -->
+<div id="investments" class="content">
+  <div class="card">
+    <h2>Investment Portfolio</h2>
+    <div id="investmentSummary"></div>
+    <div id="investmentTable" style="overflow-x:auto;margin-top:12px"></div>
+    <div class="grid-2" style="margin-top:20px">
+      <div class="chart-container"><canvas id="chInvAlloc"></canvas></div>
+      <div class="chart-container"><canvas id="chInvType"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- GOALS TAB -->
+<div id="goals" class="content">
+  <div class="card">
+    <h2>Financial Goals</h2>
+    <div id="goalsTable" style="overflow-x:auto;margin-top:12px"></div>
+    <div class="grid-2" style="margin-top:20px">
+      <div class="chart-container"><canvas id="chGoalProgress"></canvas></div>
+      <div class="chart-container"><canvas id="chGoalTarget"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- LOANS TAB -->
+<div id="loans" class="content">
+  <div class="card">
+    <h2>Loan Portfolio</h2>
+    <div id="loansSummary"></div>
+    <div id="loansTable" style="overflow-x:auto;margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- INSURANCE TAB -->
+<div id="insurance" class="content">
+  <div class="card">
+    <h2>Insurance Coverage</h2>
+    <div id="insuranceSummary"></div>
+    <div id="insuranceTable" style="overflow-x:auto;margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- TAX PLANNING TAB -->
+<div id="tax" class="content">
+  <div class="card">
+    <h2>NRI Tax Planning</h2>
+    <div id="taxInfo"></div>
+  </div>
+</div>
+
+<!-- EMERGENCY FUND TAB -->
+<div id="emergency" class="content">
+  <div class="card">
+    <h2>Emergency Fund Analysis</h2>
+    <div id="emergencyAnalysis"></div>
+  </div>
+</div>
+
+<!-- SIMULATOR TAB -->
+<div id="simulator" class="content">
+  <div class="card">
+    <h2>Wealth Simulator</h2>
+    <div id="simulatorControls"></div>
+    <div id="simulatorResults" style="margin-top:20px"></div>
+  </div>
+</div>
+
+<!-- MONTHLY TAB -->
+<div id="monthly" class="content">
+  <div class="card">
+    <h2>Monthly Breakdown</h2>
+    <div id="monthlyTable" style="overflow-x:auto;margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- ACTION PLAN TAB -->
+<div id="action" class="content">
+  <div class="card">
+    <h2>Financial Action Plan</h2>
+    <div id="actionPlan"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// EMBEDDED DATA
+// ══════════════════════════════════════════════
+const EMBEDDED_DATA = {
+  "Monthly_Tracker": [
+    [
+      "FY 2026-27 MONTHLY FINANCE TRACKER (Apr 2026 - Mar 2027)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Blue cells = your inputs | Black = auto-calculated formulas",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Category",
+      "Item",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Annual",
+      "Monthly Avg"
+    ],
+    [
+      "\ud83d\udcb0 INCOME",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Salary",
+      "Base Salary",
+      65000,
+      65000,
+      65000,
+      65000,
+      65000,
+      65000,
+      65000,
+      65000,
+      65000,
+      65000,
+      65000,
+      65000,
+      "",
+      ""
+    ],
+    [
+      "Salary",
+      "Quarterly Bonus",
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      "",
+      ""
+    ],
+    [
+      "Rental",
+      "India Property Rent",
+      1900,
+      1900,
+      1900,
+      1900,
+      1900,
+      1900,
+      1900,
+      1900,
+      1900,
+      1900,
+      1900,
+      1900,
+      "",
+      ""
+    ],
+    [
+      "",
+      "TOTAL INCOME",
+      66900,
+      66900,
+      66900,
+      66900,
+      66900,
+      66900,
+      66900,
+      66900,
+      66900,
+      66900,
+      66900,
+      66900,
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "\ud83c\udfe0 EXPENSES (Consumed \u2014 not recoverable)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Housing",
+      "Home Rent (Quarterly)",
+      10833.3,
+      10833.3,
+      10833.3,
+      10833.3,
+      10833.3,
+      10833.3,
+      10833.3,
+      10833.3,
+      10833.3,
+      10833.3,
+      10833.3,
+      10833.3,
+      "",
+      ""
+    ],
+    [
+      "Housing",
+      "DEWA + Water + Gas",
+      1250,
+      1250,
+      1250,
+      1250,
+      1250,
+      1250,
+      1250,
+      1250,
+      1250,
+      1250,
+      1250,
+      1250,
+      "",
+      ""
+    ],
+    [
+      "Household",
+      "Home Maid",
+      2300,
+      2300,
+      2300,
+      2300,
+      2300,
+      2300,
+      2300,
+      2300,
+      2300,
+      2300,
+      2300,
+      2300,
+      "",
+      ""
+    ],
+    [
+      "Household",
+      "Groceries & Provisions",
+      2500,
+      2500,
+      2500,
+      2500,
+      2500,
+      2500,
+      2500,
+      2500,
+      2500,
+      2500,
+      2500,
+      2500,
+      "",
+      ""
+    ],
+    [
+      "Household",
+      "Gardener",
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      "",
+      ""
+    ],
+    [
+      "Utilities",
+      "Telecom (Etisalat+DU)",
+      1300,
+      1300,
+      1300,
+      1300,
+      1300,
+      1300,
+      1300,
+      1300,
+      1300,
+      1300,
+      1300,
+      1300,
+      "",
+      ""
+    ],
+    [
+      "Family",
+      "Varsha (Wife Allowance)",
+      5700,
+      5700,
+      5700,
+      5700,
+      5700,
+      5700,
+      5700,
+      5700,
+      5700,
+      5700,
+      5700,
+      5700,
+      "",
+      ""
+    ],
+    [
+      "Lifestyle",
+      "Shopping + Dining + Transport",
+      1500,
+      1500,
+      1500,
+      1500,
+      1500,
+      1500,
+      1500,
+      1500,
+      1500,
+      1500,
+      1500,
+      1500,
+      "",
+      ""
+    ],
+    [
+      "Lifestyle",
+      "Salik + Fuel + Parking + Subs",
+      750,
+      750,
+      750,
+      750,
+      750,
+      750,
+      750,
+      750,
+      750,
+      750,
+      750,
+      750,
+      "",
+      ""
+    ],
+    [
+      "One-Time",
+      "Baby Expenses",
+      0,
+      0,
+      20000,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      "",
+      ""
+    ],
+    [
+      "Education",
+      "Nursery School (from Sep)",
+      0,
+      0,
+      0,
+      0,
+      0,
+      3000,
+      3000,
+      3000,
+      3000,
+      3000,
+      3000,
+      3000,
+      "",
+      ""
+    ],
+    [
+      "Other",
+      "Miscellaneous",
+      1000,
+      1000,
+      1000,
+      1000,
+      1000,
+      1000,
+      1000,
+      1000,
+      1000,
+      1000,
+      1000,
+      1000,
+      "",
+      ""
+    ],
+    [
+      "",
+      "TOTAL EXPENSES",
+      27333.3,
+      27333.3,
+      47333.3,
+      27333.3,
+      27333.3,
+      30333.3,
+      30333.3,
+      30333.3,
+      30333.3,
+      30333.3,
+      30333.3,
+      30333.3,
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "\ud83c\udfe6 LOAN EMIs (Debt Repayment)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Loan",
+      "Home Loan EMI",
+      10682,
+      10682,
+      10682,
+      10682,
+      10682,
+      10682,
+      10682,
+      10682,
+      10682,
+      10682,
+      10682,
+      10682,
+      "",
+      ""
+    ],
+    [
+      "Loan",
+      "Car Loan EMI",
+      1927,
+      1927,
+      1927,
+      1927,
+      1927,
+      1927,
+      1927,
+      1927,
+      1927,
+      1927,
+      1927,
+      1927,
+      "",
+      ""
+    ],
+    [
+      "",
+      "TOTAL EMIs",
+      12609,
+      12609,
+      12609,
+      12609,
+      12609,
+      12609,
+      12609,
+      12609,
+      12609,
+      12609,
+      12609,
+      12609,
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "\ud83d\udee1\ufe0f PROTECTION (Insurance Premiums)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Policy Bazaar",
+      "PB - Policy 1 (Term Life)",
+      116,
+      116,
+      116,
+      116,
+      116,
+      116,
+      116,
+      116,
+      116,
+      116,
+      116,
+      116,
+      "",
+      ""
+    ],
+    [
+      "Policy Bazaar",
+      "PB - Policy 2 (Health)",
+      193,
+      193,
+      193,
+      193,
+      193,
+      193,
+      193,
+      193,
+      193,
+      193,
+      193,
+      193,
+      "",
+      ""
+    ],
+    [
+      "Policy Bazaar",
+      "PB - Policy 3 (Term Life)",
+      215,
+      215,
+      215,
+      215,
+      215,
+      215,
+      215,
+      215,
+      215,
+      215,
+      215,
+      215,
+      "",
+      ""
+    ],
+    [
+      "Policy Bazaar",
+      "PB - Policy 4 (Health/Accident)",
+      130,
+      130,
+      130,
+      130,
+      130,
+      130,
+      130,
+      130,
+      130,
+      130,
+      130,
+      130,
+      "",
+      ""
+    ],
+    [
+      "Policy Bazaar",
+      "PB - Policy 5 (Term Life)",
+      144,
+      144,
+      144,
+      144,
+      144,
+      144,
+      144,
+      144,
+      144,
+      144,
+      144,
+      144,
+      "",
+      ""
+    ],
+    [
+      "Policy Bazaar",
+      "PB - Policy 6 (Endowment)",
+      76,
+      76,
+      76,
+      76,
+      76,
+      76,
+      76,
+      76,
+      76,
+      76,
+      76,
+      76,
+      "",
+      ""
+    ],
+    [
+      "SBI",
+      "SBI Policy 1 (\u20b925,666 half-yr)",
+      "",
+      0,
+      0,
+      0,
+      0,
+      1141,
+      "",
+      0,
+      0,
+      0,
+      0,
+      1141,
+      "",
+      ""
+    ],
+    [
+      "SBI",
+      "SBI Policy 2 (\u20b922,714 annual)",
+      "",
+      0,
+      0,
+      0,
+      0,
+      1010,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      "",
+      ""
+    ],
+    [
+      "",
+      "TOTAL PROTECTION",
+      874,
+      874,
+      874,
+      874,
+      874,
+      3025,
+      874,
+      874,
+      874,
+      874,
+      874,
+      2015,
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "\ud83d\udcc8 INVESTMENTS (Wealth Building)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Managed",
+      "Financial Manager (\u20b93L/mo)",
+      13333,
+      13333,
+      13333,
+      13333,
+      13333,
+      13333,
+      13333,
+      13333,
+      13333,
+      13333,
+      13333,
+      13333,
+      "",
+      ""
+    ],
+    [
+      "Gold",
+      "Monthly Gold Savings",
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      "",
+      ""
+    ],
+    [
+      "",
+      "TOTAL INVESTMENTS",
+      13933,
+      13933,
+      13933,
+      13933,
+      13933,
+      13933,
+      13933,
+      13933,
+      13933,
+      13933,
+      13933,
+      13933,
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "\ud83d\udcca SUMMARY",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Total Income",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Total Expenses",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Total EMIs",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Total Protection",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Total Investments",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "FREE CASH (Surplus)",
+      12150.7,
+      12150.7,
+      -7849.3,
+      12150.7,
+      12150.7,
+      6999.7,
+      9150.7,
+      9150.7,
+      9150.7,
+      9150.7,
+      9150.7,
+      8009.7,
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "% OF INCOME BREAKDOWN",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Expenses %",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "EMIs %",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Protection %",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Investments %",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "\ud83d\udcb0 CASH BALANCE (Running Balance)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Balance",
+      "Opening Balance (FY Start)",
+      357957,
+      370107.7,
+      382258.4,
+      374409.1,
+      386559.8,
+      398710.5,
+      405710.2,
+      414860.9,
+      424011.6,
+      433162.3,
+      442313.0,
+      451463.7,
+      "",
+      ""
+    ],
+    [
+      "Flow",
+      "Net Cash Flow (from above)",
+      12150.7,
+      12150.7,
+      -7849.3,
+      12150.7,
+      12150.7,
+      6999.7,
+      9150.7,
+      9150.7,
+      9150.7,
+      9150.7,
+      9150.7,
+      8009.7,
+      "",
+      ""
+    ],
+    [
+      "Balance",
+      "Closing Balance",
+      370107.7,
+      382258.4,
+      374409.1,
+      386559.8,
+      398710.5,
+      405710.2,
+      414860.9,
+      424011.6,
+      433162.3,
+      442313.0,
+      451463.7,
+      459473.4,
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Closing Balance (INR)",
+      9252692.5,
+      9556460.0,
+      9360227.5,
+      9663995.0,
+      9967762.5,
+      10142755.0,
+      10371522.5,
+      10600290.0,
+      10829057.5,
+      11057825.0,
+      11286592.5,
+      11486835.0,
+      "",
+      ""
+    ],
+    [
+      "",
+      "\u2190 Mar closing carries forward as Apr opening for FY 27-28",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  ],
+  "India_Stocks": [
+    [
+      "ZERODHA EQUITY PORTFOLIO (as on 09-Apr-2026)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Invested: \u20b913,61,297 | Present: \u20b913,02,075 | P&L: -\u20b959,223 (-4.35%)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Symbol",
+      "Sector",
+      "Qty",
+      "Avg Price (\u20b9)",
+      "Current Price (\u20b9)",
+      "Invested Value (\u20b9)",
+      "Present Value (\u20b9)",
+      "P&L (\u20b9)",
+      "P&L %"
+    ],
+    [
+      "ACE",
+      "Engineering",
+      78,
+      901.96,
+      857.35,
+      70352.88,
+      66873.3,
+      -3479.58,
+      -4.95
+    ],
+    [
+      "ADANIENT",
+      "Trading",
+      37,
+      2206.59,
+      2043.8,
+      81643.83,
+      75620.6,
+      -6023.23,
+      -7.38
+    ],
+    [
+      "ADANIPORTS",
+      "Logistics",
+      4,
+      1326.5,
+      1453.75,
+      5306.0,
+      5815.0,
+      509.0,
+      9.59
+    ],
+    [
+      "ASIANPAINT",
+      "Building Mat",
+      11,
+      2186.65,
+      2285.1,
+      24053.15,
+      25136.1,
+      1082.95,
+      4.5
+    ],
+    [
+      "AXISBANK",
+      "Financial",
+      2,
+      1072.65,
+      1333,
+      2145.3,
+      2666.0,
+      520.7,
+      24.27
+    ],
+    [
+      "BAJAJ-AUTO",
+      "Auto",
+      1,
+      8220.5,
+      9366,
+      8220.5,
+      9366.0,
+      1145.5,
+      13.93
+    ],
+    [
+      "BAJAJFINSV",
+      "Financial",
+      27,
+      1913.13,
+      1784.6,
+      51654.51,
+      48184.2,
+      -3470.31,
+      -6.72
+    ],
+    [
+      "BAJFINANCE",
+      "Financial",
+      2,
+      905,
+      915.45,
+      1810.0,
+      1830.9,
+      20.9,
+      1.15
+    ],
+    [
+      "BEL",
+      "Defence",
+      11,
+      381.92,
+      433.1,
+      4201.12,
+      4764.1,
+      562.98,
+      13.4
+    ],
+    [
+      "BHARTIARTL",
+      "Telecom",
+      2,
+      1886.2,
+      1861.6,
+      3772.4,
+      3723.2,
+      -49.2,
+      -1.3
+    ],
+    [
+      "BPCL",
+      "Energy",
+      10,
+      318.35,
+      298.1,
+      3183.5,
+      2981.0,
+      -202.5,
+      -6.36
+    ],
+    [
+      "CANBK",
+      "Financial",
+      1,
+      108.4,
+      139.19,
+      108.4,
+      139.19,
+      30.79,
+      28.4
+    ],
+    [
+      "CIPLA",
+      "Healthcare",
+      77,
+      1397.17,
+      1215.9,
+      107582.09,
+      93624.3,
+      -13957.79,
+      -12.97
+    ],
+    [
+      "COALINDIA",
+      "Metals",
+      71,
+      382.15,
+      449.25,
+      27132.65,
+      31896.75,
+      4764.1,
+      17.56
+    ],
+    [
+      "COLPAL",
+      "FMCG",
+      31,
+      2060.17,
+      1907,
+      63865.27,
+      59117.0,
+      -4748.27,
+      -7.43
+    ],
+    [
+      "DMART",
+      "Retail",
+      1,
+      4202.1,
+      4368.85,
+      4202.1,
+      4368.85,
+      166.75,
+      3.97
+    ],
+    [
+      "DOMS",
+      "FMCG",
+      1,
+      2303,
+      2375.65,
+      2303.0,
+      2375.65,
+      72.65,
+      3.15
+    ],
+    [
+      "DRREDDY",
+      "Healthcare",
+      11,
+      1208.23,
+      1191.45,
+      13290.53,
+      13105.95,
+      -184.58,
+      -1.39
+    ],
+    [
+      "EICHERMOT",
+      "Auto",
+      1,
+      5692,
+      7133.1,
+      5692.0,
+      7133.1,
+      1441.1,
+      25.32
+    ],
+    [
+      "ETERNAL",
+      "IT",
+      72,
+      261.68,
+      243.62,
+      18840.96,
+      17540.64,
+      -1300.32,
+      -6.9
+    ],
+    [
+      "FEDERALBNK",
+      "Financial",
+      6,
+      196.4,
+      284.45,
+      1178.4,
+      1706.7,
+      528.3,
+      44.83
+    ],
+    [
+      "GOCOLORS",
+      "Retail",
+      1,
+      702.35,
+      283.2,
+      702.35,
+      283.2,
+      -419.15,
+      -59.68
+    ],
+    [
+      "GODREJIND",
+      "Chemicals",
+      36,
+      912.54,
+      882.25,
+      32851.44,
+      31761.0,
+      -1090.44,
+      -3.32
+    ],
+    [
+      "HCLTECH",
+      "Software",
+      2,
+      1480.95,
+      1461,
+      2961.9,
+      2922.0,
+      -39.9,
+      -1.35
+    ],
+    [
+      "HDFCBANK",
+      "Financial",
+      42,
+      933.76,
+      816.1,
+      39217.92,
+      34276.2,
+      -4941.72,
+      -12.6
+    ],
+    [
+      "HDFCLIFE",
+      "Financial",
+      56,
+      752.13,
+      598.8,
+      42119.28,
+      33532.8,
+      -8586.48,
+      -20.39
+    ],
+    [
+      "HEROMOTOCO",
+      "Auto",
+      1,
+      4647.4,
+      5287.5,
+      4647.4,
+      5287.5,
+      640.1,
+      13.77
+    ],
+    [
+      "HINDUNILVR",
+      "FMCG",
+      42,
+      2281.04,
+      2145.65,
+      95803.68,
+      90117.3,
+      -5686.38,
+      -5.94
+    ],
+    [
+      "ICICIBANK",
+      "Financial",
+      46,
+      1338.02,
+      1309.25,
+      61548.92,
+      60225.5,
+      -1323.42,
+      -2.15
+    ],
+    [
+      "INDHOTEL",
+      "Tourism",
+      21,
+      687.83,
+      636.35,
+      14444.43,
+      13363.35,
+      -1081.08,
+      -7.48
+    ],
+    [
+      "INFY",
+      "Software",
+      10,
+      1316.89,
+      1346.25,
+      13168.9,
+      13462.5,
+      293.6,
+      2.23
+    ],
+    [
+      "IRCTC",
+      "IT",
+      140,
+      622.32,
+      536.5,
+      87124.8,
+      75110.0,
+      -12014.8,
+      -13.79
+    ],
+    [
+      "ITC",
+      "FMCG",
+      82,
+      328.45,
+      302.45,
+      26932.9,
+      24800.9,
+      -2132.0,
+      -7.92
+    ],
+    [
+      "JIOFIN",
+      "Financial",
+      5,
+      329.3,
+      246.9,
+      1646.5,
+      1234.5,
+      -412.0,
+      -25.02
+    ],
+    [
+      "JSWSTEEL",
+      "Metals",
+      2,
+      1062.9,
+      1194.3,
+      2125.8,
+      2388.6,
+      262.8,
+      12.36
+    ],
+    [
+      "KOTAKBANK",
+      "Financial",
+      5,
+      393.56,
+      380.15,
+      1967.8,
+      1900.75,
+      -67.05,
+      -3.41
+    ],
+    [
+      "KWIL",
+      "Misc",
+      22,
+      46.32,
+      24.43,
+      1019.04,
+      537.46,
+      -481.58,
+      -47.26
+    ],
+    [
+      "LT",
+      "Engineering",
+      2,
+      3636.8,
+      4007.35,
+      7273.6,
+      8014.7,
+      741.1,
+      10.19
+    ],
+    [
+      "MARUTI",
+      "Auto",
+      2,
+      13355,
+      13602.55,
+      26710.0,
+      27205.1,
+      495.1,
+      1.85
+    ],
+    [
+      "M&M",
+      "Auto",
+      2,
+      3284.9,
+      3210.7,
+      6569.8,
+      6421.4,
+      -148.4,
+      -2.26
+    ],
+    [
+      "NTPC",
+      "Energy",
+      31,
+      327.22,
+      374.25,
+      10143.82,
+      11601.75,
+      1457.93,
+      14.37
+    ],
+    [
+      "ONGC",
+      "Energy",
+      6,
+      237.17,
+      285.5,
+      1423.02,
+      1713.0,
+      289.98,
+      20.38
+    ],
+    [
+      "POWERGRID",
+      "Energy",
+      50,
+      274.2,
+      294.85,
+      13710.0,
+      14742.5,
+      1032.5,
+      7.53
+    ],
+    [
+      "RELIANCE",
+      "Energy",
+      1,
+      1381.6,
+      1347.8,
+      1381.6,
+      1347.8,
+      -33.8,
+      -2.45
+    ],
+    [
+      "SBIN",
+      "Financial",
+      1,
+      799.4,
+      1061.45,
+      799.4,
+      1061.45,
+      262.05,
+      32.78
+    ],
+    [
+      "SUNPHARMA",
+      "Healthcare",
+      1,
+      1636.2,
+      1714.6,
+      1636.2,
+      1714.6,
+      78.4,
+      4.79
+    ],
+    [
+      "TCS",
+      "Software",
+      17,
+      2800.33,
+      2559.8,
+      47605.61,
+      43516.6,
+      -4089.01,
+      -8.59
+    ],
+    [
+      "TECHM",
+      "Software",
+      12,
+      1443.86,
+      1451.4,
+      17326.32,
+      17416.8,
+      90.48,
+      0.52
+    ],
+    [
+      "TITAN",
+      "Retail",
+      2,
+      3516.4,
+      4492.5,
+      7032.8,
+      8985.0,
+      1952.2,
+      27.76
+    ],
+    [
+      "TMCV",
+      "Auto",
+      3,
+      207.01,
+      434.05,
+      621.03,
+      1302.15,
+      681.12,
+      109.68
+    ],
+    [
+      "TMPV",
+      "Auto",
+      88,
+      347.81,
+      335.05,
+      30607.28,
+      29484.4,
+      -1122.88,
+      -3.67
+    ],
+    [
+      "TOP100CASE",
+      "ETF",
+      301,
+      10.14,
+      10.33,
+      3052.14,
+      3109.33,
+      57.19,
+      1.87
+    ],
+    [
+      "ULTRACEMCO",
+      "Building Mat",
+      22,
+      11662.82,
+      11603,
+      256582.04,
+      255266.0,
+      -1316.04,
+      -0.51
+    ],
+    [
+      "TOTAL",
+      "",
+      1361296.3100000005,
+      1302074.67,
+      -59221.64,
+      -4.35,
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "SECTOR ALLOCATION",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Sector",
+      "Value (\u20b9)",
+      "% of Portfolio",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Building Mat",
+      280402,
+      0.2154,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Financial",
+      186758,
+      0.1434,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "FMCG",
+      176411,
+      0.1355,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Healthcare",
+      108445,
+      0.0833,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "IT",
+      92651,
+      0.0712,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Auto",
+      86200,
+      0.0662,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Software",
+      77318,
+      0.0594,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Trading",
+      75621,
+      0.0581,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Engineering",
+      74888,
+      0.0575,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Metals",
+      34285,
+      0.0263,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Energy",
+      32386,
+      0.0249,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Chemicals",
+      31761,
+      0.0244,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Retail",
+      13637,
+      0.0105,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Tourism",
+      13363,
+      0.0103,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Logistics",
+      5815,
+      0.0045,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Defence",
+      4764,
+      0.0037,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Telecom",
+      3723,
+      0.0029,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "ETF",
+      3109,
+      0.0024,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Misc",
+      537,
+      0.0004,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  ],
+  "Mutual_Funds": [
+    [
+      "ZERODHA MUTUAL FUND PORTFOLIO (as on 09-Apr-2026)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Invested: \u20b910,74,947 | Present: \u20b99,71,033 | P&L: -\u20b91,03,914 (-9.67%)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Fund Name",
+      "Category",
+      "Units",
+      "Avg NAV (\u20b9)",
+      "Current NAV (\u20b9)",
+      "Invested (\u20b9)",
+      "Present Value (\u20b9)",
+      "P&L (\u20b9)",
+      "P&L %"
+    ],
+    [
+      "DSP FLEXI CAP FUND - DIRECT PLAN",
+      "Equity - Flexi Cap",
+      424.31,
+      117.83,
+      104.91,
+      49997.48,
+      44513.3,
+      -5484.18,
+      -0.1097
+    ],
+    [
+      "EDELWEISS LARGE & MID CAP FUND - DIRECT PLAN",
+      "Equity - Large & Mid Cap",
+      469.57,
+      106.48,
+      96.94,
+      49997.51,
+      45521.61,
+      -4475.9,
+      -0.0895
+    ],
+    [
+      "HDFC BALANCED ADVANTAGE FUND - DIRECT PLAN",
+      "Hybrid - Dynamic Asset Allocation/Balanced Advantage",
+      86.11,
+      580.65,
+      538.07,
+      49997.3,
+      46330.52,
+      -3666.78,
+      -0.0733
+    ],
+    [
+      "HDFC NIFTY 50 INDEX FUND - DIRECT PLAN",
+      "Others - Index Funds/ETFs",
+      198.04,
+      252.46,
+      224.79,
+      49997.51,
+      44518.35,
+      -5479.16,
+      -0.1096
+    ],
+    [
+      "HDFC NIFTY NEXT 50 INDEX FUND - DIRECT PLAN",
+      "Others - Index Funds/ETFs",
+      3053.36,
+      16.37,
+      14.91,
+      49997.63,
+      45517.12,
+      -4480.38,
+      -0.0896
+    ],
+    [
+      "ICICI PRUDENTIAL INFRASTRUCTURE FUND - DIRECT PLAN",
+      "Equity - Sectoral/Thematic",
+      231.48,
+      215.99,
+      199.71,
+      49997.58,
+      46229.07,
+      -3768.51,
+      -0.0754
+    ],
+    [
+      "ICICI PRUDENTIAL NIFTY NEXT 50 INDEX FUND - DIRECT PLAN",
+      "Others - Index Funds/ETFs",
+      1173.09,
+      63.93,
+      58.66,
+      74996.17,
+      68809.18,
+      -6187.04,
+      -0.0825
+    ],
+    [
+      "ICICI PRUDENTIAL VALUE FUND - DIRECT PLAN",
+      "Equity - Value",
+      91.09,
+      548.87,
+      493.46,
+      49997.67,
+      44950.26,
+      -5047.41,
+      -0.101
+    ],
+    [
+      "MIRAE ASSET ELSS TAX SAVER FUND - DIRECT PLAN",
+      "Equity - ELSS",
+      861.75,
+      58.02,
+      51.83,
+      49997.5,
+      44660.8,
+      -5336.67,
+      -0.1067
+    ],
+    [
+      "MIRAE ASSET LARGE & MIDCAP FUND - DIRECT PLAN",
+      "Equity - Large & Mid Cap",
+      280.44,
+      178.28,
+      159.82,
+      49997.56,
+      44820.84,
+      -5176.72,
+      -0.1035
+    ],
+    [
+      "MIRAE ASSET MIDCAP FUND - DIRECT PLAN",
+      "Equity - Mid Cap",
+      1814.36,
+      41.33,
+      37.1,
+      74996.18,
+      67305.31,
+      -7690.94,
+      -0.1026
+    ],
+    [
+      "MOTILAL OSWAL MIDCAP FUND - DIRECT PLAN",
+      "Equity - Mid Cap",
+      843.96,
+      118.48,
+      98.4,
+      99994.88,
+      83042.77,
+      -16952.15,
+      -0.1695
+    ],
+    [
+      "MOTILAL OSWAL NIFTY MIDCAP 150 INDEX FUND - DIRECT PLAN",
+      "Others - Index Funds/ETFs",
+      1232.97,
+      40.55,
+      36.42,
+      49997.51,
+      44903.76,
+      -5093.75,
+      -0.1019
+    ],
+    [
+      "NIPPON INDIA GROWTH MID CAP FUND - DIRECT PLAN",
+      "Equity - Mid Cap",
+      10.66,
+      4688.52,
+      4333.86,
+      49998.42,
+      46216.25,
+      -3782.17,
+      -0.0756
+    ],
+    [
+      "NIPPON INDIA INDEX FUND - NIFTY 50 PLAN - DIRECT PLAN",
+      "Others - Index Funds/ETFs",
+      1041.54,
+      48,
+      42.39,
+      49997.46,
+      44155.36,
+      -5842.15,
+      -0.1168
+    ],
+    [
+      "PARAG PARIKH FLEXI CAP FUND - DIRECT PLAN",
+      "Equity - Flexi Cap",
+      790.13,
+      94.92,
+      88.05,
+      74996.26,
+      69574.69,
+      -5421.6,
+      -0.0723
+    ],
+    [
+      "PGIM INDIA FLEXI CAP FUND - DIRECT PLAN",
+      "Equity - Flexi Cap",
+      1138.64,
+      43.91,
+      38.92,
+      49997.51,
+      44315.71,
+      -5681.79,
+      -0.1136
+    ],
+    [
+      "SBI PSU FUND - DIRECT PLAN",
+      "Equity - Sectoral/Thematic",
+      1339.84,
+      37.32,
+      37.48,
+      49997.48,
+      50221.1,
+      223.62,
+      0.0045
+    ],
+    [
+      "SUNDARAM FOCUSED FUND - DIRECT PLAN",
+      "Equity - Focused",
+      275.13,
+      181.72,
+      165.11,
+      49997.56,
+      45426.82,
+      -4570.74,
+      -0.0914
+    ],
+    [
+      "TOTAL",
+      "",
+      "",
+      "",
+      "",
+      1074947.17,
+      971032.82,
+      -103914.43,
+      -0.0967
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "CATEGORY ALLOCATION",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Category",
+      "Present Value (\u20b9)",
+      "% of Portfolio",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Others - Index Funds/ETFs",
+      247903.77,
+      0.2553,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Equity - Mid Cap",
+      196564.33,
+      0.2024,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Equity - Flexi Cap",
+      158403.7,
+      0.1631,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Equity - Sectoral/Thematic",
+      96450.17,
+      0.0993,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Equity - Large & Mid Cap",
+      90342.45,
+      0.093,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Hybrid - Dynamic Asset Allocation/Balanced Advantage",
+      46330.52,
+      0.0477,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Equity - Focused",
+      45426.82,
+      0.0468,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Equity - Value",
+      44950.26,
+      0.0463,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Equity - ELSS",
+      44660.8,
+      0.046,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  ],
+  "Company_Equity": [
+    [
+      "SQUARE YARDS \u2014 CCPS & SAR HOLDINGS",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Square Yards Technology Pvt Ltd (formerly Square Dotcom Pvt Ltd) \u2014 IPO expected 2026",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "SERIES A3 CCPS (Equity Shares)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Parameter",
+      "Value",
+      "Notes",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Number of CCPS Shares",
+      39779,
+      "Series A3 CCPS held via Zerodha",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Valuation at Issuance",
+      "$240M",
+      "Company valuation when shares were issued",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Current Company Valuation",
+      "$1B",
+      "Updated from $1.2B estimate",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Growth Multiple",
+      4.17,
+      "Current / Issuance valuation",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Per Share Value at Issuance (est)",
+      814,
+      "\u20b932,380,106 total grant value / 39,779 shares",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Estimated Current Per Share Value",
+      3333,
+      "\u20b9132,583,407 total / 39,779 shares at $1B valuation",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Estimated CCPS Value (INR)",
+      132583407,
+      "39,779 \u00d7 \u20b93333 = \u20b913.26 Cr",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Estimated CCPS Value (AED)",
+      5303336.28,
+      "INR value / 22.5",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "IPO Expected",
+      "2026",
+      "Potential major liquidity event",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "STOCK APPRECIATION RIGHTS (SARs)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Grant",
+      "Grant Date",
+      "Total SARs",
+      "SAR Price (\u20b9)",
+      "Vested by Apr 2026",
+      "Unvested",
+      "Next Vesting Date",
+      "Next Vesting Amount",
+      "Grant Value/SAR (\u20b9)",
+      "Current FMV/SAR (\u20b9)"
+    ],
+    [
+      "SAR 2022",
+      "01 Apr 2022",
+      1269,
+      150,
+      1269,
+      0,
+      "Fully vested",
+      "\u2014",
+      3150,
+      5350
+    ],
+    [
+      "SAR 2023",
+      "01 May 2023",
+      1270,
+      150,
+      508,
+      762,
+      "01 May 2026",
+      "381 (30%)",
+      3150,
+      5350
+    ],
+    [
+      "SAR 2024",
+      "06 Sep 2024",
+      948,
+      150,
+      142,
+      806,
+      "06 Sep 2026",
+      "237 (25%)",
+      5350,
+      5350
+    ],
+    [
+      "SAR 2025",
+      "01 May 2025",
+      1066,
+      150,
+      0,
+      1066,
+      "01 May 2026",
+      "160 (15%)",
+      5350,
+      5350
+    ],
+    [
+      "TOTAL SARs",
+      "",
+      4553,
+      "",
+      1919,
+      2634,
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "VESTING TIMELINE (FY 26-27 and beyond)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Vesting Date",
+      "Grant",
+      "SARs Vesting",
+      "Cumulative Vested",
+      "Status",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "01 Apr 2023",
+      "SAR 2022",
+      190,
+      190,
+      "Vested",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "01 Apr 2024",
+      "SAR 2022",
+      317,
+      507,
+      "Vested",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "01 May 2024",
+      "SAR 2023",
+      191,
+      698,
+      "Vested",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "01 Apr 2025",
+      "SAR 2022",
+      381,
+      1079,
+      "Vested",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "01 May 2025",
+      "SAR 2023",
+      317,
+      1396,
+      "Vested",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "06 Sep 2025",
+      "SAR 2024",
+      142,
+      1538,
+      "Vested",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "01 Apr 2026",
+      "SAR 2022",
+      381,
+      1919,
+      "Vested",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "01 May 2026",
+      "SAR 2023 + 2025",
+      541,
+      2460,
+      "Upcoming",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "06 Sep 2026",
+      "SAR 2024",
+      237,
+      2697,
+      "Upcoming",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "01 May 2027",
+      "SAR 2023 + 2025",
+      648,
+      3345,
+      "Future",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "06 Sep 2027",
+      "SAR 2024",
+      284,
+      3629,
+      "Future",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "01 May 2028",
+      "SAR 2025",
+      320,
+      3949,
+      "Future",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "06 Sep 2028",
+      "SAR 2024",
+      285,
+      4234,
+      "Future",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "01 May 2029",
+      "SAR 2025",
+      319,
+      4553,
+      "Future",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "SAR VALUE ESTIMATOR",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Estimated FMV per share at IPO (\u20b9)",
+      5350,
+      "Current FMV from ERP (Apr 2026) \u2014 update when IPO price announced",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "SAR Exercise Price (\u20b9)",
+      150,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Appreciation per SAR (\u20b9)",
+      5200,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Total Vested SARs Value (\u20b9)",
+      9978800,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Total ALL SARs Value (\u20b9)",
+      23675600,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "ERP SUMMARY VERIFICATION (Apr 2026)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "Total Grant Value",
+      "Total Vested Value",
+      "Total Current Value",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "CCPS",
+      32380106,
+      159116000,
+      159116000,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "SAR 2022",
+      3997350,
+      6789150,
+      6789150,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "SAR 2023",
+      4000500,
+      2717800,
+      6795000,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "SAR 2024",
+      5071800,
+      760770,
+      5071800,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "SAR 2025",
+      5703100,
+      0,
+      5703100,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "TOTAL",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  ],
+  "US_Stocks": [
+    [
+      "US STOCK PORTFOLIO",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Stock",
+      "Invested (USD)",
+      "Current Value (USD)",
+      "P&L %",
+      "P&L (USD)",
+      "Value in AED",
+      "Value in INR"
+    ],
+    [
+      "Google (GOOG)",
+      315.86,
+      332.47,
+      0.0526,
+      16.61,
+      1220.16,
+      27453.71
+    ],
+    [
+      "Netflix (NFLX)",
+      99.17,
+      101.69,
+      0.0254,
+      2.52,
+      373.2,
+      8397.05
+    ],
+    [
+      "NVIDIA (NVDA)",
+      180.59,
+      187.29,
+      0.0371,
+      6.7,
+      687.35,
+      15465.47
+    ],
+    [
+      "Uber (UBER)",
+      72.21,
+      65.29,
+      -0.0958,
+      -6.92,
+      239.61,
+      5391.32
+    ],
+    [
+      "TOTAL",
+      667.83,
+      686.74,
+      "",
+      18.91,
+      2520.32,
+      56707.55
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "USD to AED Rate",
+      3.67,
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "AED to INR Rate",
+      22.5,
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  ],
+  "Gold_Silver": [
+    [
+      "GOLD & SILVER HOLDINGS",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Asset",
+      "Quantity",
+      "Rate per unit (AED)",
+      "Total Value (AED)"
+    ],
+    [
+      "Physical Gold",
+      300,
+      500,
+      150000.0
+    ],
+    [
+      "Physical Silver",
+      2000,
+      8,
+      16000.0
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "TOTAL VALUE",
+      "",
+      "",
+      166000.0
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Monthly Gold Savings",
+      600,
+      "Per month \u2014 accumulated to buy gold at year-end",
+      ""
+    ],
+    [
+      "Annual Gold Accumulation",
+      "",
+      "",
+      ""
+    ]
+  ],
+  "Property": [
+    [
+      "REAL ESTATE HOLDINGS",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Property",
+      "Location",
+      "Current Value (INR)",
+      "Current Value (AED)"
+    ],
+    [
+      "Prestige Courtyard",
+      "Chennai, India",
+      16000000,
+      711111.11
+    ],
+    [
+      "TOTAL",
+      "",
+      16000000,
+      711111.11
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "PURCHASE DETAILS",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Purchase Price",
+      11000000,
+      "",
+      ""
+    ],
+    [
+      "Purchase Date",
+      "11-Nov-2022",
+      "",
+      ""
+    ],
+    [
+      "Current Market Value",
+      16000000,
+      "",
+      ""
+    ],
+    [
+      "Appreciation (\u20b9)",
+      5000000,
+      "",
+      ""
+    ],
+    [
+      "Appreciation (%)",
+      0.4545,
+      "",
+      ""
+    ],
+    [
+      "Holding Period",
+      "~3.5 years (Nov 2022 \u2014 Apr 2026)",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "PROPERTY vs LOAN",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Current Market Value",
+      16000000,
+      "",
+      ""
+    ],
+    [
+      "Home Loan Outstanding (AED)",
+      391467,
+      "",
+      ""
+    ],
+    [
+      "Home Loan Outstanding (INR)",
+      9786673,
+      "",
+      ""
+    ],
+    [
+      "Net Equity in Property (INR)",
+      6213327,
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Rental Income (Monthly)",
+      42750,
+      "",
+      ""
+    ],
+    [
+      "Rental Yield on Current Value (%)",
+      0.0321,
+      "",
+      ""
+    ],
+    [
+      "Rental Yield on Purchase Price (%)",
+      0.0466,
+      "",
+      ""
+    ]
+  ],
+  "Insurance": [
+    [
+      "INSURANCE POLICY REGISTER",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Policy",
+      "Provider",
+      "Type",
+      "Premium",
+      "Frequency",
+      "Annual (AED)",
+      "Sum Assured",
+      "Start Year",
+      "Tenure / Notes"
+    ],
+    [
+      "Policy 1",
+      "Policy Bazaar",
+      "Term Life",
+      116,
+      "Monthly",
+      1392.0,
+      "",
+      "",
+      "Active"
+    ],
+    [
+      "Policy 2",
+      "Policy Bazaar",
+      "Health",
+      193,
+      "Monthly",
+      2316.0,
+      "",
+      "",
+      "Active"
+    ],
+    [
+      "Policy 3",
+      "Policy Bazaar",
+      "Term Life",
+      215,
+      "Monthly",
+      2580.0,
+      "",
+      "",
+      "Active"
+    ],
+    [
+      "Policy 4",
+      "Policy Bazaar",
+      "Health/Accident",
+      130,
+      "Monthly",
+      1560.0,
+      "",
+      "",
+      "Active"
+    ],
+    [
+      "Policy 5",
+      "Policy Bazaar",
+      "Term Life",
+      144,
+      "Monthly",
+      1728.0,
+      "",
+      "",
+      "Active"
+    ],
+    [
+      "Policy 6",
+      "Policy Bazaar",
+      "Endowment",
+      76,
+      "Monthly",
+      912.0,
+      "",
+      "",
+      "Review"
+    ],
+    [
+      "SBI Policy 1",
+      "SBI",
+      "Life/Endowment",
+      1141,
+      "Half-Yearly",
+      2282.0,
+      "2018",
+      "20 years",
+      "\u20b925,666 half-yr"
+    ],
+    [
+      "SBI Policy 2",
+      "SBI",
+      "Life/Endowment",
+      1010,
+      "Annually",
+      1010.0,
+      "2021",
+      "40 years",
+      "\u20b922,714 annual"
+    ],
+    [
+      "TOTAL ANNUAL PREMIUMS",
+      "",
+      "",
+      "",
+      "",
+      13780.0,
+      "",
+      "",
+      ""
+    ]
+  ],
+  "Loans": [
+    [
+      "LOAN TRACKER",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Loan",
+      "Lender",
+      "Original Amt (AED)",
+      "Interest Rate",
+      "EMI (AED)",
+      "Total Tenure",
+      "Start Date",
+      "End Date",
+      "Months Paid",
+      "Outstanding (AED)"
+    ],
+    [
+      "Home Loan",
+      "Bank",
+      450000,
+      0.0655,
+      10682,
+      "48 months",
+      "Sep 2025",
+      "Aug 2029",
+      7,
+      391467
+    ],
+    [
+      "Car Loan",
+      "Bank",
+      107420,
+      0.0293,
+      1927,
+      "60 months",
+      "Jan 2026",
+      "Dec 2030",
+      3,
+      102414
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "CAR PURCHASE DETAILS",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Total Car Cost",
+      135000,
+      "AED",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Down Payment",
+      27580,
+      "AED",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Insurance",
+      7158,
+      "AED",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Registration",
+      540,
+      "AED",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Total Upfront",
+      34278,
+      "AED",
+      "Wait, 27580+7158+540=35278, using user's stated total",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Financed Amount",
+      107420,
+      "AED (135,000 - 27,580 down)",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  ],
+  "Goals": [
+    [
+      "FINANCIAL GOALS",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Goal",
+      "Target (AED)",
+      "Target Date",
+      "Years Left",
+      "Priority",
+      "Saved So Far (AED)",
+      "SIP Needed/mo",
+      "Progress %"
+    ],
+    [
+      "Emergency Fund (6 months)",
+      300000,
+      "2027-06",
+      1,
+      "Critical",
+      250000,
+      4167.0,
+      0.8333
+    ],
+    [
+      "Baby Fund",
+      25000,
+      "2026-10",
+      0.5,
+      "High",
+      0,
+      4167.0,
+      0.0
+    ],
+    [
+      "Children's Education",
+      1500000,
+      "2040-01",
+      14,
+      "High",
+      50000,
+      8631.0,
+      0.0333
+    ],
+    [
+      "Retirement Corpus",
+      5000000,
+      "2050-01",
+      24,
+      "High",
+      200000,
+      16667.0,
+      0.04
+    ],
+    [
+      "2nd Property / Home Upgrade",
+      1000000,
+      "2031-01",
+      5,
+      "Medium",
+      100000,
+      15000.0,
+      0.1
+    ]
+  ],
+  "Bank_Accounts": [
+    [
+      "BANK ACCOUNTS (Update your balances here)",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "\u26a0\ufe0f Please update these balances \u2014 they are estimates from last year",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "Account",
+      "Bank",
+      "Type",
+      "Country",
+      "Balance (AED)",
+      "Balance (INR)"
+    ],
+    [
+      "CUB NRE",
+      "City Union Bank",
+      "NRE",
+      "India",
+      10172,
+      228870.0
+    ],
+    [
+      "CUB NRO",
+      "City Union Bank",
+      "NRO",
+      "India",
+      18360,
+      413100.0
+    ],
+    [
+      "Axis NRE",
+      "Axis Bank",
+      "NRE",
+      "India",
+      6103,
+      137317.5
+    ],
+    [
+      "Axis NRO",
+      "Axis Bank",
+      "NRO",
+      "India",
+      55225,
+      1242562.5
+    ],
+    [
+      "RAK",
+      "RAK Bank",
+      "Savings",
+      "UAE",
+      233597,
+      5255932.5
+    ],
+    [
+      "NBD Saving",
+      "Emirates NBD",
+      "Savings",
+      "UAE",
+      34500,
+      776250.0
+    ],
+    [
+      "TOTAL",
+      "",
+      "",
+      "",
+      357957.0,
+      8054032.5
+    ]
+  ],
+  "Settings": [
+    [
+      "DASHBOARD SETTINGS",
+      "",
+      ""
+    ],
+    [
+      "",
+      "",
+      ""
+    ],
+    [
+      "Setting",
+      "Value",
+      "Notes"
+    ],
+    [
+      "AED to INR Rate",
+      25,
+      "Update periodically"
+    ],
+    [
+      "USD to AED Rate",
+      3.67,
+      "Update periodically"
+    ],
+    [
+      "Gold Rate per gram (AED)",
+      500,
+      "Update monthly"
+    ],
+    [
+      "Budget: Expenses %",
+      50,
+      "Target % of income for expenses"
+    ],
+    [
+      "Budget: EMIs %",
+      20,
+      "Target % for loan repayments"
+    ],
+    [
+      "Budget: Protection %",
+      5,
+      "Target % for insurance"
+    ],
+    [
+      "Budget: Investments %",
+      25,
+      "Target % for wealth building"
+    ],
+    [
+      "Emergency Fund Target (months)",
+      6,
+      "Months of expenses as buffer"
+    ],
+    [
+      "Expected Return % (Equity)",
+      12,
+      "Long-term assumption"
+    ],
+    [
+      "Inflation Rate %",
+      5,
+      "For goal calculations"
+    ],
+    [
+      "Financial Year",
+      "2026-27",
+      "Apr 2026 - Mar 2027"
+    ]
+  ]
+};
+
+// ══════════════════════════════════════════════
+// GLOBAL STATE
+// ══════════════════════════════════════════════
+let D = EMBEDDED_DATA;
+let charts = {};
+// Chart.js defaults for light luxury theme
+Chart.defaults.color = '#4a4540';
+Chart.defaults.borderColor = 'rgba(30,20,10,0.06)';
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+const M = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+// Exchange rate — starts from Settings, updates live
+const settingsSheet = EMBEDDED_DATA['Settings'] || [];
+const xrRow = settingsSheet.find(r => String(r[0]).includes('AED to INR'));
+let XR = xrRow ? Number(xrRow[1]) || 25 : 25;
+let xrSource = 'Settings';
+
+// Fetch live rate and re-render
+async function fetchLiveRate() {
+  try {
+    const res = await fetch('https://api.frankfurter.app/latest?from=AED&to=INR');
+    if (!res.ok) throw new Error('API error');
+    const json = await res.json();
+    if (json.rates && json.rates.INR) {
+      XR = json.rates.INR;
+      xrSource = 'Live (' + json.date + ')';
+      document.getElementById('xrDisplay').innerHTML = `💱 1 AED = ₹${XR.toFixed(2)} <span style="font-size:10px;opacity:0.7">${xrSource}</span>`;
+      renderAll();
+    }
+  } catch(e) {
+    console.log('Live rate fetch failed, using Settings value:', XR);
+    document.getElementById('xrDisplay').innerHTML = `💱 1 AED = ₹${XR.toFixed(2)} <span style="font-size:10px;opacity:0.7">Settings (offline)</span>`;
+  }
+}
+
+// ══════════════════════════════════════════════
+// DUAL CURRENCY FORMATTING
+// ══════════════════════════════════════════════
+const fmt = n => n == null || isNaN(n) ? '—' : Math.round(n).toLocaleString('en-IN');
+const dual = (aed) => aed == null || isNaN(aed) ? '—' : `${fmt(aed)} AED <span class="sub-currency">(₹${fmt(aed * XR)})</span>`;
+const dualINR = (inr) => inr == null || isNaN(inr) ? '—' : `₹${fmt(inr)} <span class="sub-currency">(${fmt(inr / XR)} AED)</span>`;
+const fmtP = (p) => (isNaN(p) ? 0 : p*100).toFixed(1)+'%';
+
+// ══════════════════════════════════════════════
+// DATA PARSING
+// ══════════════════════════════════════════════
+function getMonthlyData() {
+  const sheet = D['Monthly_Tracker'];
+  if (!sheet) return null;
+  let income = [], expenses = [], emis = [], protection = [], investments = [], freeCash = [];
+  let openingBal = [], netCashFlow = [], closingBal = [], closingBalINR = [];
+  let incomeItems = [], expenseItems = [], emiItems = [], protItems = [], invItems = [];
+  let section = '';
+
+  for (let r = 4; r < sheet.length; r++) {
+    const row = sheet[r];
+    const cA = String(row[0]||'').trim(), cB = String(row[1]||'').trim();
+
+    if (cA.includes('INCOME') && !cA.includes('%')) { section = 'income'; continue; }
+    if (cA.includes('EXPENSES')) { section = 'expense'; continue; }
+    if (cA.includes('LOAN')) { section = 'emi'; continue; }
+    if (cA.includes('PROTECTION')) { section = 'protection'; continue; }
+    if (cA.includes('INVESTMENTS')) { section = 'invest'; continue; }
+    if (cA.includes('SUMMARY')) { section = 'summary'; continue; }
+    if (cA.includes('% OF INCOME')) { section = ''; continue; }
+
+    if (cB === 'TOTAL INCOME') { income = row.slice(2,14).map(Number); section=''; continue; }
+    if (cB === 'TOTAL EXPENSES') { expenses = row.slice(2,14).map(Number); section=''; continue; }
+    if (cB === 'TOTAL EMIs') { emis = row.slice(2,14).map(Number); section=''; continue; }
+    if (cB === 'TOTAL PROTECTION') { protection = row.slice(2,14).map(Number); section=''; continue; }
+    if (cB === 'TOTAL INVESTMENTS') { investments = row.slice(2,14).map(Number); section=''; continue; }
+    if (cB === 'FREE CASH (Surplus)') { freeCash = row.slice(2,14).map(Number); continue; }
+    if (cB.includes('Opening Balance')) { openingBal = row.slice(2,14).map(Number); continue; }
+    if (cB.includes('Net Cash Flow')) { netCashFlow = row.slice(2,14).map(Number); continue; }
+    if (cB === 'Closing Balance') { closingBal = row.slice(2,14).map(Number); continue; }
+    if (cB.includes('Closing Balance (INR)')) { closingBalINR = row.slice(2,14).map(Number); continue; }
+
+    const item = {cat: cA, item: cB, vals: row.slice(2,14).map(Number)};
+    if (section === 'income' && cB) incomeItems.push(item);
+    if (section === 'expense' && cB) expenseItems.push(item);
+    if (section === 'emi' && cB) emiItems.push(item);
+    if (section === 'protection' && cB) protItems.push(item);
+    if (section === 'invest' && cB) invItems.push(item);
+  }
+
+  const catTotals = {};
+  expenseItems.forEach(ei => { catTotals[ei.cat] = (catTotals[ei.cat]||0) + ei.vals.reduce((a,b)=>a+b,0)/12; });
+
+  return {income, expenses, emis, protection, investments, freeCash, openingBal, netCashFlow, closingBal, closingBalINR, incomeItems, expenseItems, emiItems, protItems, invItems, catTotals};
+}
+
+function getIndiaStocks() {
+  const sheet = D['India_Stocks'];
+  if (!sheet || sheet.length < 4) return null;
+  let stocks = [], sectors = {};
+  const totalRow = sheet.find(r => r[0] === 'TOTAL');
+  // TOTAL row format: ["TOTAL", "", invested, current, pnl, pnlPct%, ...]
+  // pnlPct is already in percentage form (e.g., -4.35 = -4.35%), convert to decimal for fmtP
+  const totals = totalRow ? {
+    invested: Number(totalRow[2]) || 0,
+    current: Number(totalRow[3]) || 0,
+    pnl: Number(totalRow[4]) || 0,
+    pnlPct: (Number(totalRow[5]) || 0) / 100
+  } : null;
+
+  for (let r = 4; r < sheet.length; r++) {
+    const row = sheet[r];
+    if (String(row[0]||'').includes('TOTAL') || !row[0] || String(row[0]).includes('Sector')) continue;
+    if (row[0] === 'SECTOR ALLOCATION') break;
+    stocks.push({symbol: row[0], sector: row[1], qty: row[2], avgPrice: row[3], currentPrice: row[4], invested: row[5], current: row[6], pnl: row[7], pnlPct: (row[8] || 0) / 100});
+  }
+
+  const sectorStart = sheet.findIndex(r => r[0] === 'SECTOR ALLOCATION');
+  if (sectorStart > 0) {
+    for (let r = sectorStart + 2; r < sheet.length; r++) {
+      const row = sheet[r];
+      if (!row[0] || String(row[0]).trim() === '') continue;
+      sectors[row[0]] = {value: row[1], pct: row[2]};
+    }
+  }
+
+  return {stocks, totals, sectors};
+}
+
+function getNetWorth() {
+  const monthly = getMonthlyData();
+  const indiaStocks = getIndiaStocks();
+  const usStocks = D['US_Stocks'] ? D['US_Stocks'].find(r => r[0] === 'TOTAL') : null;
+  const ccpsSheet = D['Company_Equity'] || [];
+  const ccpsRow = ccpsSheet.find(r => r[0] === 'Estimated CCPS Value (INR)');
+  const sarsRow = ccpsSheet.find(r => String(r[0]).includes('Total Vested SARs'));
+  const property = D['Property'];
+  const propRow = property ? property.find(r => r[0] === 'TOTAL') : null;
+  const gold = D['Gold_Silver'];
+  const goldRow = gold ? gold.find(r => String(r[0]).includes('TOTAL')) : null;
+  const bankRow = D['Bank_Accounts'] ? D['Bank_Accounts'].find(r => String(r[0]).includes('TOTAL')) : null;
+  const mfSheet = D['Mutual_Funds'] ? D['Mutual_Funds'].find(r => r[0] === 'TOTAL') : null;
+  const loans = D['Loans'] || [];
+
+  const assets = {
+    bankAED: bankRow ? Number(bankRow[4]) || 0 : 0,
+    indiaStocksINR: indiaStocks && indiaStocks.totals ? indiaStocks.totals.current : 0,
+    usStocksAED: usStocks ? Number(usStocks[5]) || 0 : 0,
+    ccpsINR: ccpsRow ? Number(ccpsRow[1]) || 0 : 0,
+    sarsINR: sarsRow ? Number(sarsRow[1]) || 0 : 0,
+    propertyINR: propRow ? Number(propRow[2]) || 0 : 0,
+    goldAED: goldRow ? Number(goldRow[3]) || 0 : 0,
+    mfINR: mfSheet ? Number(mfSheet[6]) || 0 : 0
+  };
+
+  const homeLoan = loans.find(l => l[0] === 'Home Loan');
+  const carLoan = loans.find(l => l[0] === 'Car Loan');
+  // Outstanding balance — try index 9 (new format) then 7 (old format)
+  const getLoanBal = (row) => { if (!row) return 0; return Number(row[9]) || Number(row[7]) || 0; };
+  const liabilities = {
+    homeAED: getLoanBal(homeLoan),
+    carAED: getLoanBal(carLoan)
+  };
+
+  const totalAssetsAED = assets.bankAED + (assets.indiaStocksINR / XR) + assets.usStocksAED + (assets.ccpsINR / XR) + (assets.sarsINR / XR) + (assets.propertyINR / XR) + assets.goldAED + (assets.mfINR / XR);
+  const totalLiabilitiesAED = liabilities.homeAED + liabilities.carAED;
+  const netWorthAED = totalAssetsAED - totalLiabilitiesAED;
+
+  return {assets, liabilities, totalAssetsAED, totalLiabilitiesAED, netWorthAED};
+}
+
+// ══════════════════════════════════════════════
+// RENDERING FUNCTIONS
+// ══════════════════════════════════════════════
+function renderOverview() {
+  const monthly = getMonthlyData();
+  const nw = getNetWorth();
+
+  const annualIncome = monthly.income.reduce((a,b) => a+b, 0);
+  const annualTrueExpenses = monthly.expenses.reduce((a,b) => a+b, 0) + monthly.emis.reduce((a,b) => a+b, 0) + monthly.protection.reduce((a,b) => a+b, 0);
+  const annualInvestments = monthly.investments.reduce((a,b) => a+b, 0);
+  const annualFreeCash = monthly.freeCash.reduce((a,b) => a+b, 0);
+  // Savings = Investments + Free Cash (money NOT consumed)
+  const savings = annualInvestments + annualFreeCash;
+  const savingsRate = annualIncome > 0 ? savings / annualIncome : 0;
+
+  document.getElementById('overviewIncome').innerHTML = dual(annualIncome);
+  document.getElementById('overviewExpenses').innerHTML = dual(annualTrueExpenses);
+  document.getElementById('overviewSavings').innerHTML = dual(savings);
+  document.getElementById('overviewSavingsRate').innerHTML = fmtP(savingsRate);
+  document.getElementById('overviewAssets').innerHTML = dual(nw.totalAssetsAED);
+  document.getElementById('overviewLiabilities').innerHTML = dual(nw.totalLiabilitiesAED);
+  document.getElementById('overviewNetWorth').innerHTML = dual(nw.netWorthAED);
+
+  // Asset allocation chart
+  const assetLabels = ['Bank', 'India Stocks', 'US Stocks', 'Mutual Funds', 'CCPS', 'SARs', 'Property', 'Gold'];
+  const assetValues = [nw.assets.bankAED, nw.assets.indiaStocksINR/XR, nw.assets.usStocksAED, nw.assets.mfINR/XR, nw.assets.ccpsINR/XR, nw.assets.sarsINR/XR, nw.assets.propertyINR/XR, nw.assets.goldAED];
+  const colors = ['#9a7b4f', '#3d3d3d', '#c4a265', '#5c564e', '#d4b87a', '#7a5c2e', '#2e7d5b', '#a63d3d'];
+
+  if (charts.chAllocation) charts.chAllocation.destroy();
+  charts.chAllocation = new Chart(document.getElementById('chAllocation'), {
+    type: 'doughnut',
+    data: {labels: assetLabels, datasets: [{data: assetValues, backgroundColor: colors}]},
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+  });
+
+  // Cash flow chart (Free Cash per month)
+  const cashFlowLabels = M.slice(0, 12);
+  const cashFlowData = monthly.freeCash.slice(0, 12);
+
+  if (charts.chAssetClass) charts.chAssetClass.destroy();
+  charts.chAssetClass = new Chart(document.getElementById('chAssetClass'), {
+    type: 'bar',
+    data: {labels: cashFlowLabels, datasets: [{label: 'Free Cash / Month', data: cashFlowData, backgroundColor: cashFlowData.map(v => v >= 0 ? 'rgba(46,125,91,0.75)' : 'rgba(166,61,61,0.75)'), borderRadius: 4}]},
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+  });
+
+  // Running cash balance
+  if (monthly.openingBal.length) {
+    document.getElementById('cashOpening').innerHTML = dual(monthly.openingBal[0]);
+    // Current month index (0=Apr ... 11=Mar)
+    const now = new Date();
+    const cm = now.getMonth() >= 3 ? now.getMonth() - 3 : now.getMonth() + 9;
+    document.getElementById('cashCurrent').innerHTML = dual(monthly.closingBal[Math.min(cm, 11)]);
+    document.getElementById('cashClosing').innerHTML = dual(monthly.closingBal[11]);
+
+    if (charts.chCashBalance) charts.chCashBalance.destroy();
+    charts.chCashBalance = new Chart(document.getElementById('chCashBalance'), {
+      type: 'line',
+      data: {
+        labels: cashFlowLabels,
+        datasets: [
+          {label: 'Closing Balance (AED)', data: monthly.closingBal.slice(0,12), borderColor: '#2e7d5b', backgroundColor: 'rgba(74,222,128,0.1)', fill: true, tension: 0.3, pointRadius: 4},
+          {label: 'Opening Balance (AED)', data: monthly.openingBal.slice(0,12), borderColor: '#aaa', borderDash: [5,5], fill: false, tension: 0.3, pointRadius: 2}
+        ]
+      },
+      options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}, scales: {y: {beginAtZero: false}}}
+    });
+  }
+}
+
+function renderBudget() {
+  const monthly = getMonthlyData();
+  const avgIncome = monthly.income.reduce((a,b) => a+b, 0) / 12;
+  const avgExpenses = monthly.expenses.reduce((a,b) => a+b, 0) / 12;
+  const avgEmis = monthly.emis.reduce((a,b) => a+b, 0) / 12;
+  const avgProtection = monthly.protection.reduce((a,b) => a+b, 0) / 12;
+  const avgInvest = monthly.investments.reduce((a,b) => a+b, 0) / 12;
+  const avgFreeCash = monthly.freeCash.reduce((a,b) => a+b, 0) / 12;
+
+  const buckets = [
+    {label: 'Expenses', val: avgExpenses, color: '#3d3d3d', icon: '🏠'},
+    {label: 'Loan EMIs', val: avgEmis, color: '#7a5c2e', icon: '🏦'},
+    {label: 'Protection', val: avgProtection, color: '#5c564e', icon: '🛡️'},
+    {label: 'Investments', val: avgInvest, color: '#9a7b4f', icon: '📈'},
+    {label: 'Free Cash', val: avgFreeCash, color: '#c4a265', icon: '💰'}
+  ];
+
+  document.getElementById('bucketAllocation').innerHTML = buckets.map(b => `
+    <div class="budget-item">
+      <label>${b.icon} ${b.label} <span style="color:var(--muted);font-size:10px">(${fmtP(avgIncome > 0 ? b.val/avgIncome : 0)})</span></label>
+      <div class="val" style="color:${b.color}">${dual(b.val)}</div>
+    </div>
+  `).join('');
+
+  // 4-bucket pie chart
+  if (charts.chBucketPie) charts.chBucketPie.destroy();
+  charts.chBucketPie = new Chart(document.getElementById('chBucketPie'), {
+    type: 'doughnut',
+    data: {labels: buckets.map(b => b.label), datasets: [{data: buckets.map(b => Math.max(0, b.val)), backgroundColor: ['#3d3d3d', '#7a5c2e', '#5c564e', '#9a7b4f', '#c4a265']}]},
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+  });
+
+  // Expense breakdown
+  const cats = Object.entries(monthly.catTotals).sort((a,b) => b[1] - a[1]);
+  document.getElementById('expenseBreakdown').innerHTML = cats.map(([cat, val]) => `
+    <div class="budget-item">
+      <label>${cat}</label>
+      <div class="val">${dual(val)}</div>
+    </div>
+  `).join('');
+
+  // Expense categories pie chart
+  if (charts.chExpenseCat) charts.chExpenseCat.destroy();
+  charts.chExpenseCat = new Chart(document.getElementById('chExpenseCat'), {
+    type: 'pie',
+    data: {
+      labels: cats.map(c => c[0]),
+      datasets: [{data: cats.map(c => c[1]), backgroundColor: ['#9a7b4f', '#3d3d3d', '#c4a265', '#5c564e', '#d4b87a', '#7a5c2e', '#2e7d5b', '#a63d3d']}]
+    },
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+  });
+
+  // Budget timeline
+  const budgetData = {
+    expenses: monthly.expenses.map((e, i) => e/monthly.income[i]*100),
+    emis: monthly.emis.map((e, i) => e/monthly.income[i]*100),
+    protection: monthly.protection.map((e, i) => e/monthly.income[i]*100),
+    investments: monthly.investments.map((e, i) => e/monthly.income[i]*100)
+  };
+
+  if (charts.chBudgetTimeline) charts.chBudgetTimeline.destroy();
+  charts.chBudgetTimeline = new Chart(document.getElementById('chBudgetTimeline'), {
+    type: 'bar',
+    data: {
+      labels: M,
+      datasets: [
+        {label: 'Expenses %', data: budgetData.expenses, backgroundColor: '#3d3d3d'},
+        {label: 'EMIs %', data: budgetData.emis, backgroundColor: '#7a5c2e'},
+        {label: 'Protection %', data: budgetData.protection, backgroundColor: '#5c564e'},
+        {label: 'Investments %', data: budgetData.investments, backgroundColor: '#2e7d5b'}
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {x: {stacked: false}, y: {stacked: false}},
+      plugins: {legend: {position: 'bottom'}}
+    }
+  });
+}
+
+function renderNetWorth() {
+  const nw = getNetWorth();
+
+  const assetsList = [
+    {label: 'Bank Accounts', value: nw.assets.bankAED, isAED: true},
+    {label: 'India Stocks', value: nw.assets.indiaStocksINR, isAED: false},
+    {label: 'US Stocks', value: nw.assets.usStocksAED, isAED: true},
+    {label: 'Mutual Funds', value: nw.assets.mfINR, isAED: false},
+    {label: 'CCPS', value: nw.assets.ccpsINR, isAED: false},
+    {label: 'SARs', value: nw.assets.sarsINR, isAED: false},
+    {label: 'Property', value: nw.assets.propertyINR, isAED: false},
+    {label: 'Gold/Silver', value: nw.assets.goldAED, isAED: true}
+  ];
+
+  document.getElementById('assetsTable').innerHTML = assetsList.map(a => `
+    <div class="stat-box">
+      <label>${a.label}</label>
+      <div class="amount">${a.isAED ? dual(a.value) : dualINR(a.value)}</div>
+    </div>
+  `).join('');
+
+  const liabilitiesList = [
+    {label: 'Home Loan', value: nw.liabilities.homeAED},
+    {label: 'Car Loan', value: nw.liabilities.carAED}
+  ];
+
+  document.getElementById('liabilitiesTable').innerHTML = liabilitiesList.map(l => `
+    <div class="stat-box">
+      <label>${l.label}</label>
+      <div class="amount">${dual(l.value)}</div>
+    </div>
+  `).join('');
+
+  // Net worth pie chart
+  const assetLabels = assetsList.filter(a => a.value > 0).map(a => a.label);
+  const assetValues = assetsList.filter(a => a.value > 0).map(a => a.isAED ? a.value : a.value/XR);
+  const colors = ['#9a7b4f', '#3d3d3d', '#c4a265', '#5c564e', '#d4b87a', '#7a5c2e', '#2e7d5b', '#a63d3d'];
+
+  if (charts.chNetWorth) charts.chNetWorth.destroy();
+  charts.chNetWorth = new Chart(document.getElementById('chNetWorth'), {
+    type: 'doughnut',
+    data: {labels: assetLabels, datasets: [{data: assetValues, backgroundColor: colors}]},
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+  });
+
+  document.getElementById('netWorthTrend').innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">Total Assets</div>
+        <div class="kpi-value">${dual(nw.totalAssetsAED)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Total Liabilities</div>
+        <div class="kpi-value">${dual(nw.totalLiabilitiesAED)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Net Worth</div>
+        <div class="kpi-value">${dual(nw.netWorthAED)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderIndiaStocks() {
+  const stocks = getIndiaStocks();
+  if (!stocks) return;
+
+  const {stocks: stockList, totals, sectors} = stocks;
+
+  const header = totals ? `
+    <div class="stat-box">
+      <label>Portfolio Summary</label>
+      <div style="margin-top:8px">
+        <div>Invested: ${dualINR(totals.invested)}</div>
+        <div>Current Value: ${dualINR(totals.current)}</div>
+        <div>P&L: ${dualINR(totals.pnl)}</div>
+        <div>Return: <span style="color:${totals.pnlPct > 0 ? '#2e7d5b' : '#a63d3d'}">${fmtP(totals.pnlPct)}</span></div>
+      </div>
+    </div>
+  ` : '';
+
+  document.getElementById('indiaStocksHeader').innerHTML = header;
+
+  const table = `
+    <table>
+      <tr>
+        <th>Symbol</th><th>Sector</th><th>Qty</th><th>Avg ₹</th><th>Current ₹</th><th>Current Value</th><th>P&L</th><th>Return</th>
+      </tr>
+      ${stockList.map(s => `
+        <tr>
+          <td>${s.symbol}</td><td>${s.sector}</td><td>${s.qty}</td><td>${fmt(s.avgPrice)}</td><td>${fmt(s.currentPrice)}</td>
+          <td>${dualINR(s.current)}</td><td>${dualINR(s.pnl)}</td>
+          <td style="color:${s.pnlPct > 0 ? '#2e7d5b' : '#a63d3d'}">${fmtP(s.pnlPct)}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+
+  document.getElementById('indiaStocksTable').innerHTML = table;
+
+  // Sector allocation
+  const sectorLabels = Object.keys(sectors);
+  const sectorValues = sectorLabels.map(s => sectors[s].value || 0);
+  const colors = ['#9a7b4f', '#3d3d3d', '#c4a265', '#5c564e', '#d4b87a', '#7a5c2e', '#2e7d5b', '#a63d3d', '#7c6cb0', '#c47d2e'];
+
+  if (charts.chSectorAlloc) charts.chSectorAlloc.destroy();
+  charts.chSectorAlloc = new Chart(document.getElementById('chSectorAlloc'), {
+    type: 'doughnut',
+    data: {labels: sectorLabels, datasets: [{data: sectorValues, backgroundColor: colors}]},
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+  });
+
+  if (charts.chStockAlloc) charts.chStockAlloc.destroy();
+  charts.chStockAlloc = new Chart(document.getElementById('chStockAlloc'), {
+    type: 'bar',
+    data: {
+      labels: stockList.slice(0, 15).map(s => s.symbol),
+      datasets: [{label: 'Value (INR)', data: stockList.slice(0, 15).map(s => s.current), backgroundColor: '#3d3d3d'}]
+    },
+    options: {responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: {legend: {display: false}}}
+  });
+}
+
+function renderUSStocks() {
+  const sheet = D['US_Stocks'];
+  if (!sheet) return;
+
+  // Find TOTAL row dynamically
+  const totalRow = sheet.find(r => String(r[0]).trim() === 'TOTAL') || [];
+  const header = `
+    <div class="stat-box">
+      <label>Portfolio Summary (USD)</label>
+      <div style="margin-top:8px">
+        <div>Invested: <strong>$${fmt(totalRow[1])}</strong> <span class="sub-currency">(${dual(totalRow[5]||0)})</span></div>
+        <div>Current Value: <strong>$${fmt(totalRow[2])}</strong> <span class="sub-currency">(${dual(totalRow[5]||0)})</span></div>
+        <div>P&L: <strong style="color:${(totalRow[4]||0) >= 0 ? '#2e7d5b' : '#a63d3d'}">$${fmt(totalRow[4])}</strong></div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('usStocksHeader').innerHTML = header;
+
+  // Get individual stock rows (between header row and TOTAL)
+  const totalIdx = sheet.findIndex(r => String(r[0]).trim() === 'TOTAL');
+  const stocks = sheet.slice(3, totalIdx > 3 ? totalIdx : 7);
+  const table = `
+    <table>
+      <tr>
+        <th>Stock</th><th>Invested ($)</th><th>Current ($)</th><th>Value (AED)</th><th>Value (INR)</th><th>Return</th>
+      </tr>
+      ${stocks.map(s => `
+        <tr>
+          <td>${s[0]}</td><td>$${fmt(s[1])}</td><td>$${fmt(s[2])}</td>
+          <td>${dual(s[5])}</td><td>${dualINR(s[6])}</td>
+          <td style="color:${s[3] > 0 ? '#2e7d5b' : '#a63d3d'}">${fmtP(s[3])}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+
+  document.getElementById('usStocksTable').innerHTML = table;
+}
+
+function renderEquity() {
+  const sheet = D['Company_Equity'];
+  if (!sheet) return;
+
+  const ccps = sheet.find(r => r[0] === 'Estimated CCPS Value (INR)');
+  const ccpsAED = sheet.find(r => String(r[0]).includes('Estimated CCPS Value (AED)'));
+  const sarsVested = sheet.find(r => String(r[0]).includes('Total Vested SARs'));
+  const valRow = sheet.find(r => r[0] === 'Current Company Valuation');
+  const growthRow = sheet.find(r => r[0] === 'Growth Multiple');
+
+  document.getElementById('equitySummary').innerHTML = `
+    <div class="stat-box">
+      <label>Square Yards IPO Expected 2026</label>
+      <div style="margin-top:8px">
+        <div>CCPS Shares: 39,779</div>
+        <div>Company Valuation: ${valRow ? valRow[1] : '$1B'} (${growthRow ? growthRow[1] + 'x' : '4.17x'} growth)</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('ccpsDetails').innerHTML = `
+    <div class="stat-box">
+      <label>CCPS Value</label>
+      <div class="amount">${dualINR(ccps ? ccps[1] : 0)}</div>
+    </div>
+    <div class="stat-box">
+      <label>SARs (Vested)</label>
+      <div class="amount">${dualINR(sarsVested ? sarsVested[1] : 0)}</div>
+    </div>
+  `;
+
+  // SARs table
+  const sarsGrants = sheet.filter(r => r[0] && r[0].startsWith('SAR'));
+  const sarsTable = `
+    <table>
+      <tr>
+        <th>Grant</th><th>Date</th><th>Total SARs</th><th>Vested</th><th>Unvested</th><th>Next Vesting</th><th>FMV/SAR (₹)</th>
+      </tr>
+      ${sarsGrants.map(s => `
+        <tr>
+          <td>${s[0]}</td><td>${s[1]}</td><td>${fmt(s[2])}</td><td>${fmt(s[4])}</td><td>${fmt(s[5])}</td>
+          <td>${s[6]}</td><td>₹${fmt(s[9])}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+
+  document.getElementById('sarsTable').innerHTML = sarsTable;
+
+  // Vesting timeline — find rows between "VESTING TIMELINE" header and next blank section
+  const vestingStart = sheet.findIndex(r => String(r[0]).includes('VESTING TIMELINE'));
+  let vesting = [];
+  if (vestingStart > 0) {
+    for (let i = vestingStart + 2; i < sheet.length; i++) {
+      const row = sheet[i];
+      if (!row[0] || String(row[0]).trim() === '' || String(row[0]).includes('SAR VALUE')) break;
+      if (String(row[4]) === 'Vested' || String(row[4]) === 'Upcoming' || String(row[4]) === 'Future') {
+        vesting.push(row);
+      }
+    }
+  }
+
+  const vestingHTML = `
+    <table style="font-size:11px">
+      <tr>
+        <th>Date</th><th>Grant</th><th>SARs Vesting</th><th>Cumulative</th><th>Status</th>
+      </tr>
+      ${vesting.map(v => {
+        const status = String(v[4]);
+        const color = status === 'Vested' ? 'var(--green)' : status === 'Upcoming' ? 'var(--yellow)' : 'var(--muted)';
+        return `<tr>
+          <td>${v[0]}</td><td>${v[1]}</td><td>${fmt(v[2])}</td><td>${fmt(v[3])}</td>
+          <td style="color:${color};font-weight:600">${status}</td>
+        </tr>`;
+      }).join('')}
+    </table>
+  `;
+
+  document.getElementById('vestingTimeline').innerHTML = vestingHTML;
+}
+
+function renderProperty() {
+  const sheet = D['Property'];
+  if (!sheet) return;
+
+  const propRow = sheet.find(r => r[0] === 'TOTAL');
+  const purchaseDate = sheet.find(r => r[0] === 'Purchase Date');
+  const purchasePrice = sheet.find(r => r[0] === 'Purchase Price');
+  const holdingPeriod = sheet.find(r => String(r[0]).includes('Holding Period'));
+  const appreciation = sheet.find(r => String(r[0]).includes('Appreciation (₹)'));
+  const appreciationPct = sheet.find(r => r[0] === 'Appreciation (%)');
+  const rentalIncome = sheet.find(r => String(r[0]).includes('Rental Income'));
+  const rentalYield = sheet.find(r => String(r[0]).includes('Rental Yield on Current'));
+
+  document.getElementById('propertyOverview').innerHTML = `
+    <div class="stat-box">
+      <label>Prestige Courtyard, Chennai</label>
+      <div class="amount">${dualINR(propRow ? propRow[2] : 0)}</div>
+    </div>
+    <div class="stat-box">
+      <label>Purchase Date</label>
+      <div class="amount" style="font-size:16px">${purchaseDate ? purchaseDate[1] : '—'}</div>
+    </div>
+    <div class="stat-box">
+      <label>Holding Period</label>
+      <div class="amount" style="font-size:14px">${holdingPeriod ? holdingPeriod[1] : '—'}</div>
+    </div>
+  `;
+
+  document.getElementById('propertyPerformance').innerHTML = `
+    <div class="stat-box">
+      <label>Purchase Price</label>
+      <div class="amount">${dualINR(purchasePrice ? purchasePrice[1] : 0)}</div>
+    </div>
+    <div class="stat-box">
+      <label>Appreciation</label>
+      <div class="amount" style="color:var(--green)">${dualINR(appreciation ? appreciation[1] : 0)} (${appreciationPct ? fmtP(appreciationPct[1]) : '—'})</div>
+    </div>
+    <div class="stat-box">
+      <label>Monthly Rental Income</label>
+      <div class="amount">${dualINR(rentalIncome ? rentalIncome[1] : 0)}</div>
+    </div>
+    <div class="stat-box">
+      <label>Rental Yield</label>
+      <div class="amount">${rentalYield ? fmtP(rentalYield[1]) : '—'}</div>
+    </div>
+  `;
+
+  // Use INR row for loan (not AED row) so units match property value
+  const propLoanINR = sheet.find(r => String(r[0]).includes('Home Loan Outstanding (INR)'));
+  const loanEquity = sheet.find(r => String(r[0]).includes('Net Equity'));
+  const loanINR = propLoanINR ? Number(propLoanINR[1]) || 0 : 0;
+  const equityINR = loanEquity ? Number(loanEquity[1]) || 0 : 0;
+
+  document.getElementById('loanEquityBreakdown').innerHTML = `
+    <div class="stat-box">
+      <label>Property Value</label>
+      <div class="amount">${dualINR(propRow ? propRow[2] : 0)}</div>
+    </div>
+    <div class="stat-box">
+      <label>Loan Outstanding</label>
+      <div class="amount" style="color:var(--red)">${dualINR(loanINR)}</div>
+    </div>
+    <div class="stat-box">
+      <label>Net Equity</label>
+      <div class="amount" style="color:${equityINR >= 0 ? 'var(--green)' : 'var(--red)'}">${dualINR(equityINR)}</div>
+    </div>
+  `;
+
+  if (charts.chPropertyLoan) charts.chPropertyLoan.destroy();
+  const propValue = propRow ? propRow[2] : 0;
+  const loanValue = loanINR;
+  charts.chPropertyLoan = new Chart(document.getElementById('chPropertyLoan'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Property Value', 'Loan Outstanding'],
+      datasets: [{data: [propValue, loanValue], backgroundColor: ['#2e7d5b', '#a63d3d']}]
+    },
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+  });
+}
+
+function renderInvestments() {
+  const monthly = getMonthlyData();
+  const avgInvest = monthly.investments.reduce((a,b) => a+b, 0) / 12;
+  const annualInvest = monthly.investments.reduce((a,b) => a+b, 0);
+
+  document.getElementById('investmentSummary').innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">Monthly SIP</div>
+        <div class="kpi-value">${dual(avgInvest)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Annual Investment</div>
+        <div class="kpi-value">${dual(annualInvest)}</div>
+      </div>
+    </div>
+  `;
+
+  const invItems = monthly.invItems.map(i => ({name: i.item, annual: i.vals.reduce((a,b) => a+b, 0)}));
+  const table = `
+    <table>
+      <tr><th>Investment Type</th><th>Annual Amount</th><th>Monthly Avg</th></tr>
+      ${invItems.map(i => `
+        <tr>
+          <td>${i.name}</td>
+          <td>${dual(i.annual)}</td>
+          <td>${dual(i.annual/12)}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+
+  document.getElementById('investmentTable').innerHTML = table;
+
+  if (charts.chInvAlloc) charts.chInvAlloc.destroy();
+  charts.chInvAlloc = new Chart(document.getElementById('chInvAlloc'), {
+    type: 'pie',
+    data: {
+      labels: invItems.map(i => i.name),
+      datasets: [{data: invItems.map(i => i.annual), backgroundColor: ['#9a7b4f', '#3d3d3d', '#c4a265']}]
+    },
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+  });
+
+  if (charts.chInvType) charts.chInvType.destroy();
+  charts.chInvType = new Chart(document.getElementById('chInvType'), {
+    type: 'bar',
+    data: {
+      labels: M,
+      datasets: [{label: 'Monthly Investment', data: monthly.investments.slice(0, 12), backgroundColor: '#9a7b4f'}]
+    },
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: false}}}
+  });
+}
+
+function renderGoals() {
+  const sheet = D['Goals'];
+  if (!sheet) return;
+
+  const goals = sheet.slice(4).filter(r => r[0] && !String(r[0]).includes('Goal'));
+  const table = `
+    <table>
+      <tr>
+        <th>Goal</th><th>Target</th><th>Saved</th><th>Progress</th><th>Monthly SIP</th><th>Target Date</th>
+      </tr>
+      ${goals.map(g => `
+        <tr>
+          <td>${g[0]}</td>
+          <td>${dual(g[1])}</td>
+          <td>${dual(g[5])}</td>
+          <td><div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, g[7]*100)}%"></div></div>${fmtP(g[7])}</td>
+          <td>${dual(g[6])}</td>
+          <td>${g[2]}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+
+  document.getElementById('goalsTable').innerHTML = table;
+
+  if (charts.chGoalProgress) charts.chGoalProgress.destroy();
+  charts.chGoalProgress = new Chart(document.getElementById('chGoalProgress'), {
+    type: 'bar',
+    data: {
+      labels: goals.map(g => g[0].split('(')[0].trim()),
+      datasets: [{label: 'Progress %', data: goals.map(g => g[7]*100), backgroundColor: '#3d3d3d'}]
+    },
+    options: {responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: {legend: {display: false}}}
+  });
+
+  if (charts.chGoalTarget) charts.chGoalTarget.destroy();
+  charts.chGoalTarget = new Chart(document.getElementById('chGoalTarget'), {
+    type: 'doughnut',
+    data: {
+      labels: goals.map(g => g[0].split('(')[0].trim()),
+      datasets: [{data: goals.map(g => g[1]), backgroundColor: ['#9a7b4f', '#3d3d3d', '#c4a265', '#5c564e', '#d4b87a']}]
+    },
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+  });
+}
+
+function renderLoans() {
+  const sheet = D['Loans'];
+  if (!sheet) return;
+
+  // Filter actual loan rows (Home Loan, Car Loan)
+  const loans = sheet.slice(3).filter(r => r[0] && (r[0] === 'Home Loan' || r[0] === 'Car Loan'));
+
+  const totalEMI = loans.reduce((a, b) => a + (Number(b[4]) || 0), 0);
+  const totalRemaining = loans.reduce((a, b) => a + (Number(b[9]) || Number(b[7]) || 0), 0);
+
+  document.getElementById('loansSummary').innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">Monthly EMI</div>
+        <div class="kpi-value">${dual(totalEMI)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Total Outstanding</div>
+        <div class="kpi-value">${dual(totalRemaining)}</div>
+      </div>
+    </div>
+  `;
+
+  const table = `
+    <table>
+      <tr>
+        <th>Loan</th><th>Original</th><th>Rate</th><th>EMI</th><th>Tenure</th><th>Start</th><th>End</th><th>Paid</th><th>Outstanding</th>
+      </tr>
+      ${loans.map(l => `
+        <tr>
+          <td>${l[0]}</td>
+          <td>${dual(l[2])}</td>
+          <td>${fmtP(l[3])}</td>
+          <td>${dual(l[4])}</td>
+          <td>${l[5]}</td>
+          <td>${l[6]}</td>
+          <td>${l[7]}</td>
+          <td>${l[8]} mo</td>
+          <td style="font-weight:600;color:var(--accent)">${dual(l[9])}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+
+  document.getElementById('loansTable').innerHTML = table;
+
+  // Car purchase details
+  const carDetails = sheet.filter(r => String(r[0]).match(/^(Total Car|Down Payment|Insurance|Registration|Total Upfront|Financed)/));
+  if (carDetails.length) {
+    document.getElementById('loansTable').innerHTML += `
+      <h3 style="margin-top:16px">Car Purchase Breakdown</h3>
+      <table>
+        ${carDetails.map(c => `<tr><td>${c[0]}</td><td style="font-weight:600">${dual(c[1])}</td></tr>`).join('')}
+      </table>
+    `;
+  }
+}
+
+function renderInsurance() {
+  const sheet = D['Insurance'];
+  if (!sheet) return;
+
+  const policies = sheet.slice(3).filter(r => r[0] && !String(r[0]).includes('POLICY') && !String(r[0]).includes('TOTAL'));
+  const totalRow = sheet.find(r => String(r[0]).includes('TOTAL'));
+  const totalPremium = totalRow ? Number(totalRow[5]) || 0 : policies.reduce((a, b) => a + (Number(b[5]) || 0), 0);
+
+  document.getElementById('insuranceSummary').innerHTML = `
+    <div class="stat-box">
+      <label>Total Annual Premium</label>
+      <div class="amount">${dual(totalPremium)}</div>
+    </div>
+  `;
+
+  const table = `
+    <table>
+      <tr>
+        <th>Policy</th><th>Provider</th><th>Type</th><th>Premium (Monthly)</th><th>Annual</th><th>Status</th>
+      </tr>
+      ${policies.map(p => `
+        <tr>
+          <td>${p[0]}</td>
+          <td>${p[1]}</td>
+          <td>${p[2]}</td>
+          <td>${dual(p[3])}</td>
+          <td>${dual(p[5])}</td>
+          <td>${p[8]}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+
+  document.getElementById('insuranceTable').innerHTML = table;
+}
+
+function renderTax() {
+  document.getElementById('taxInfo').innerHTML = `
+    <div class="stat-box">
+      <label>NRI Income Tax</label>
+      <div style="margin-top:8px;font-size:12px">
+        <p><strong>Foreign Salary Income:</strong> Taxed in Dubai (0% personal income tax)</p>
+        <p><strong>India Income (Rent):</strong> Taxable in India under FEMA guidelines</p>
+        <p><strong>India Stocks & Property:</strong> Capital gains tax when sold</p>
+        <p><strong>Foreign Assets:</strong> Report under Schedule FA</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderEmergency() {
+  const monthly = getMonthlyData();
+  const avgExpenses = monthly.expenses.reduce((a,b) => a+b, 0) / 12;
+  const target = avgExpenses * 6;
+  const nw = getNetWorth();
+  const liquid = nw.assets.bankAED;
+  const progress = liquid / target;
+
+  document.getElementById('emergencyAnalysis').innerHTML = `
+    <div class="stat-box">
+      <label>Monthly Expenses Average</label>
+      <div class="amount">${dual(avgExpenses)}</div>
+    </div>
+    <div class="stat-box">
+      <label>6-Month Target</label>
+      <div class="amount">${dual(target)}</div>
+    </div>
+    <div class="stat-box">
+      <label>Current Liquid Assets</label>
+      <div class="amount">${dual(liquid)}</div>
+    </div>
+    <div class="progress-bar" style="height:12px;margin-top:12px"><div class="progress-fill" style="width:${Math.min(100, progress*100)}%"></div></div>
+    <div style="margin-top:8px;font-size:12px">Coverage: ${fmtP(progress)}</div>
+  `;
+}
+
+function renderSimulator() {
+  document.getElementById('simulatorControls').innerHTML = `
+    <div class="grid-2" style="margin-bottom:12px">
+      <div>
+        <label style="font-size:12px;color:var(--muted)">Monthly SIP (AED)</label>
+        <input type="number" id="sipAmount" value="15000" style="width:100%;padding:8px;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:4px">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--muted)">Annual Return %</label>
+        <input type="number" id="returnRate" value="12" style="width:100%;padding:8px;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:4px">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--muted)">Years</label>
+        <input type="number" id="years" value="20" style="width:100%;padding:8px;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:4px">
+      </div>
+      <div style="align-self:flex-end">
+        <button onclick="runSimulator()" style="width:100%;padding:8px;background:var(--accent);border:none;color:#0f172a;font-weight:600;border-radius:4px;cursor:pointer">Run Simulator</button>
+      </div>
+    </div>
+  `;
+
+  const nw = getNetWorth();
+  const sip = 15000, rate = 0.12, years = 20;
+  const future = nw.netWorthAED * Math.pow(1 + rate, years) + sip * 12 * (Math.pow(1 + rate, years) - 1) / rate;
+
+  document.getElementById('simulatorResults').innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">Current Net Worth</div>
+        <div class="kpi-value">${dual(nw.netWorthAED)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Future Value (${years} yrs, 12%)</div>
+        <div class="kpi-value">${dual(future)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Growth</div>
+        <div class="kpi-value">${fmtP(future/nw.netWorthAED - 1)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function runSimulator() {
+  const sip = Number(document.getElementById('sipAmount').value) || 15000;
+  const rate = Number(document.getElementById('returnRate').value) / 100 || 0.12;
+  const years = Number(document.getElementById('years').value) || 20;
+
+  const nw = getNetWorth();
+  const future = nw.netWorthAED * Math.pow(1 + rate, years) + sip * 12 * (Math.pow(1 + rate, years) - 1) / rate;
+  const growth = future / nw.netWorthAED;
+
+  document.getElementById('simulatorResults').innerHTML = `
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">Current Net Worth</div>
+        <div class="kpi-value">${dual(nw.netWorthAED)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Monthly SIP</div>
+        <div class="kpi-value">${dual(sip)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Annual Return</div>
+        <div class="kpi-value">${fmtP(rate)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Time Horizon</div>
+        <div class="kpi-value">${years} years</div>
+      </div>
+    </div>
+    <div style="margin-top:16px;padding:12px;background:rgba(26,26,26,.06);border-left:3px solid var(--accent);border-radius:4px">
+      <div style="font-size:12px;color:var(--muted)">PROJECTED FUTURE VALUE</div>
+      <div style="font-size:24px;font-weight:700;color:var(--accent);margin-top:8px">${dual(future)}</div>
+      <div style="margin-top:8px;font-size:12px">Growth: <span style="color:var(--green)">${fmtP(growth - 1)}</span></div>
+    </div>
+  `;
+}
+
+function renderMonthly() {
+  const sheet = D['Monthly_Tracker'];
+  if (!sheet) return;
+
+  const months = M;
+  let table = '<table><tr><th>Category / Item</th>' + months.map(m => `<th>${m}</th>`).join('') + '<th>Annual</th></tr>';
+
+  for (let r = 5; r < sheet.length; r++) {
+    const row = sheet[r];
+    const cat = String(row[0]||'').trim();
+    const item = String(row[1]||'').trim();
+    if (!item || cat.includes('%')) continue;
+    if (cat.includes('carries forward')) continue;
+
+    const vals = row.slice(2, 14).map(v => Number(v) || 0);
+
+    // Cash balance section — special styling
+    if (cat.includes('CASH BALANCE')) {
+      table += `<tr style="background:rgba(185,133,11,.1)"><td colspan="${months.length + 2}" style="font-weight:700;color:var(--green);padding-top:16px">💰 CASH BALANCE (Running)</td></tr>`;
+      continue;
+    }
+    if (item.includes('Opening Balance')) {
+      table += `<tr style="background:rgba(185,133,11,.05)"><td style="padding-left:24px;color:var(--green)">Opening Balance</td>` + vals.map(v => `<td style="color:#2d8a4e">${fmt(v)}</td>`).join('') + `<td></td></tr>`;
+      continue;
+    }
+    if (item.includes('Net Cash Flow')) {
+      table += `<tr style="background:rgba(185,133,11,.05)"><td style="padding-left:24px;color:var(--yellow)">Net Cash Flow</td>` + vals.map(v => `<td style="color:${v >= 0 ? 'var(--green)' : 'var(--red)'}">${v >= 0 ? '+' : ''}${fmt(v)}</td>`).join('') + `<td></td></tr>`;
+      continue;
+    }
+    if (item === 'Closing Balance') {
+      table += `<tr style="background:rgba(185,133,11,.08)"><td style="padding-left:24px;font-weight:600;color:var(--cyan)">Closing Balance</td>` + vals.map(v => `<td style="font-weight:600;color:var(--cyan)">${fmt(v)}</td>`).join('') + `<td></td></tr>`;
+      continue;
+    }
+    if (item.includes('Closing Balance (INR)')) {
+      table += `<tr style="background:rgba(185,133,11,.05)"><td style="padding-left:24px;color:var(--muted);font-size:11px">↳ INR Equivalent</td>` + vals.map(v => `<td style="color:var(--muted);font-size:11px">₹${fmt(v)}</td>`).join('') + `<td></td></tr>`;
+      continue;
+    }
+
+    const annual = vals.reduce((a,b) => a+b, 0);
+
+    // Section headers
+    if (cat && !item) {
+      table += `<tr style="background:rgba(26,26,26,.06)"><td style="font-weight:600">${cat}</td>` + vals.map(v => `<td>${fmt(v)}</td>`).join('') + `<td style="font-weight:600">${fmt(annual)}</td></tr>`;
+    }
+    // TOTAL rows — bold
+    else if (item.startsWith('TOTAL') || item === 'FREE CASH (Surplus)') {
+      const isFree = item.includes('FREE CASH');
+      const rowColor = isFree ? 'var(--yellow)' : 'var(--accent)';
+      table += `<tr style="background:rgba(185,133,11,.04)"><td style="padding-left:24px;font-weight:600;color:${rowColor}">${item}</td>` + vals.map(v => `<td style="font-weight:600;color:${rowColor}">${fmt(v)}</td>`).join('') + `<td style="font-weight:600;color:${rowColor}">${fmt(annual)}</td></tr>`;
+    }
+    // Regular items
+    else if (item) {
+      table += `<tr><td style="padding-left:24px">${item}</td>` + vals.map(v => `<td>${fmt(v)}</td>`).join('') + `<td>${fmt(annual)}</td></tr>`;
+    }
+  }
+
+  table += '</table>';
+  document.getElementById('monthlyTable').innerHTML = table;
+}
+
+function renderActionPlan() {
+  const monthly = getMonthlyData();
+  const nw = getNetWorth();
+  const goals = D['Goals'].slice(4).filter(r => r[0]);
+
+  const actions = [
+    {priority: 'Critical', action: 'Update bank balances monthly', desc: 'Keep cash tracking current for accurate net worth'},
+    {priority: 'High', action: 'Home rent optimization', desc: 'Smoothed to 10,833.3 AED/month from quarterly payments'},
+    {priority: 'High', action: 'Emergency fund target', desc: `${fmtP(nw.assets.bankAED / (monthly.expenses[0] * 6))} of 6-month target reached`},
+    {priority: 'Medium', action: 'Baby fund progress', desc: '25,000 AED target for Oct 2026'},
+    {priority: 'Medium', action: 'CCPS monitoring', desc: 'IPO expected 2026 - major liquidity event'},
+    {priority: 'Low', action: 'Tax planning review', desc: 'NRI status: optimize foreign/India income split'}
+  ];
+
+  document.getElementById('actionPlan').innerHTML = actions.map(a => `
+    <div style="background:rgba(185,133,11,.04);border-left:3px solid ${a.priority === 'Critical' ? '#a63d3d' : a.priority === 'High' ? '#b8963a' : '#2e7d5b'};padding:12px;margin-bottom:12px;border-radius:4px">
+      <div style="font-size:13px;font-weight:600;color:${a.priority === 'Critical' ? '#a63d3d' : a.priority === 'High' ? '#b8963a' : '#2e7d5b'}">${a.priority.toUpperCase()}</div>
+      <div style="font-size:14px;font-weight:500;margin-top:4px">${a.action}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">${a.desc}</div>
+    </div>
+  `).join('');
+}
+
+
+function getMutualFunds() {
+  const mfSheet = D['Mutual_Funds'];
+  if (!mfSheet || mfSheet.length < 5) return null;
+
+  const funds = [];
+  const categories = {};
+
+  for (let i = 4; i < 23; i++) {
+    const row = mfSheet[i];
+    if (!row || !row[0] || String(row[0]).includes('TOTAL') || String(row[0]).includes('CATEGORY')) continue;
+
+    const name = String(row[0]);
+    const category = String(row[1]);
+    const units = Number(row[2]) || 0;
+    const avgNav = Number(row[3]) || 0;
+    const currentNav = Number(row[4]) || 0;
+    const invested = Number(row[5]) || 0;
+    const current = Number(row[6]) || 0;
+    const pnl = Number(row[7]) || 0;
+    const pnlPct = Number(row[8]) || 0;
+
+    funds.push({name, category, units, avgNav, currentNav, invested, current, pnl, pnlPct});
+
+    if (!categories[category]) {
+      categories[category] = {value: 0};
+    }
+    categories[category].value += current;
+  }
+
+  const totalRow = mfSheet.find(r => r[0] === 'TOTAL');
+  const totals = totalRow ? {
+    invested: Number(totalRow[5]) || 0,
+    current: Number(totalRow[6]) || 0,
+    pnl: Number(totalRow[7]) || 0,
+    pnlPct: Number(totalRow[8]) || 0
+  } : null;
+
+  return {funds, totals, categories};
+}
+
+function renderMutualFunds() {
+  const mfData = getMutualFunds();
+  if (!mfData) return;
+
+  const {funds, totals, categories} = mfData;
+
+  const header = totals ? `
+    <div class="stat-box">
+      <label>Portfolio Summary</label>
+      <div style="margin-top:8px">
+        <div>Invested: ${dualINR(totals.invested)}</div>
+        <div>Current Value: ${dualINR(totals.current)}</div>
+        <div>P&L: ${dualINR(totals.pnl)}</div>
+        <div>Return: <span style="color:${totals.pnlPct > 0 ? '#2e7d5b' : '#a63d3d'}">${fmtP(totals.pnlPct)}</span></div>
+      </div>
+    </div>
+  ` : '';
+
+  document.getElementById('mfHeader').innerHTML = header;
+
+  const table = `
+    <table>
+      <tr>
+        <th>Fund Name</th><th>Category</th><th>Units</th><th>Avg NAV</th><th>Current NAV</th><th>Invested</th><th>Present Value</th><th>P&L</th><th>Return</th>
+      </tr>
+      ${funds.map(f => `
+        <tr>
+          <td>${f.name.length > 40 ? f.name.substring(0, 37) + '...' : f.name}</td>
+          <td>${f.category}</td>
+          <td>${fmt(f.units)}</td>
+          <td>₹${fmt(f.avgNav)}</td>
+          <td>₹${fmt(f.currentNav)}</td>
+          <td>${dualINR(f.invested)}</td>
+          <td>${dualINR(f.current)}</td>
+          <td>${dualINR(f.pnl)}</td>
+          <td style="color:${f.pnlPct > 0 ? '#2e7d5b' : '#a63d3d'}">${fmtP(f.pnlPct)}</td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+
+  document.getElementById('mfTable').innerHTML = table;
+
+  // Category allocation doughnut chart
+  const catLabels = Object.keys(categories);
+  const catValues = catLabels.map(c => categories[c].value || 0);
+  const colors = ['#9a7b4f', '#3d3d3d', '#c4a265', '#5c564e', '#d4b87a', '#7a5c2e', '#2e7d5b', '#a63d3d', '#7c6cb0'];
+
+  if (charts.chMFAlloc) charts.chMFAlloc.destroy();
+  charts.chMFAlloc = new Chart(document.getElementById('chMFAlloc'), {
+    type: 'doughnut',
+    data: {labels: catLabels, datasets: [{data: catValues, backgroundColor: colors}]},
+    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
+  });
+
+  // Top funds bar chart
+  const topFunds = funds.sort((a, b) => b.current - a.current).slice(0, 10);
+  const fundLabels = topFunds.map(f => f.name.length > 25 ? f.name.substring(0, 22) + '...' : f.name);
+  const fundValues = topFunds.map(f => f.current);
+
+  if (charts.chMFValue) charts.chMFValue.destroy();
+  charts.chMFValue = new Chart(document.getElementById('chMFValue'), {
+    type: 'bar',
+    data: {labels: fundLabels, datasets: [{label: 'Present Value (₹)', data: fundValues, backgroundColor: '#3d3d3d'}]},
+    options: {responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: {legend: {position: 'bottom'}}}
+  });
+}
+
+// ══════════════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════════════
+function switchTab(tabId) {
+  document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  const target = document.getElementById(tabId);
+  if (target) target.classList.add('active');
+  // Highlight matching tab in bar
+  document.querySelectorAll('.tab').forEach(el => {
+    if (el.getAttribute('onclick') && el.getAttribute('onclick').includes("'" + tabId + "'")) el.classList.add('active');
+  });
+
+  // Smooth scroll to top
+  window.scrollTo({top: 0, behavior: 'smooth'});
+
+  const renderers = {
+    overview: renderOverview, budget: renderBudget, networth: renderNetWorth,
+    stocks: renderIndiaStocks, mutualfunds: renderMutualFunds, usstocks: renderUSStocks,
+    equity: renderEquity, property: renderProperty, investments: renderInvestments,
+    goals: renderGoals, loans: renderLoans, insurance: renderInsurance,
+    tax: renderTax, emergency: renderEmergency, simulator: renderSimulator,
+    monthly: renderMonthly, action: renderActionPlan
+  };
+  if (renderers[tabId]) renderers[tabId]();
+}
+
+// ══════════════════════════════════════════════
+// FILE UPLOAD & AUTO-LOAD
+// ══════════════════════════════════════════════
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const wb = XLSX.read(e.target.result, {header: false});
+    D = {};
+    for (const sheetName of wb.SheetNames) {
+      D[sheetName] = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header: 1});
+    }
+    renderAll();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderAll() {
+  renderOverview();
+  renderBudget();
+  renderNetWorth();
+  renderIndiaStocks();
+  renderUSStocks();
+  renderEquity();
+  renderProperty();
+  renderInvestments();
+  renderGoals();
+  renderLoans();
+  renderInsurance();
+  renderEmergency();
+  renderMonthly();
+  renderActionPlan();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderAll();
+  fetchLiveRate();
+
+  // ═══ RIPPLE EFFECT ═══
+  document.addEventListener('click', function(e) {
+    const target = e.target.closest('.stat-box, .card, .kpi, .tab, .upload-btn, .budget-item');
+    if (!target) return;
+    const ripple = document.createElement('span');
+    ripple.classList.add('ripple');
+    const rect = target.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 2;
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
+    ripple.style.top = (e.clientY - rect.top - size/2) + 'px';
+    target.style.position = target.style.position || 'relative';
+    target.style.overflow = 'hidden';
+    target.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+  });
+
+  // ═══ CLICKABLE DATA-TAB NAVIGATION ═══
+  document.addEventListener('click', function(e) {
+    const el = e.target.closest('[data-tab]');
+    if (!el) return;
+    const tab = el.getAttribute('data-tab');
+    if (tab) {
+      e.stopPropagation();
+      switchTab(tab);
+    }
+  });
+
+  // ═══ ANIMATE NUMBERS ON SCROLL ═══
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, {threshold: 0.1});
+
+  document.querySelectorAll('.stat-box, .kpi, .card').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(10px)';
+    el.style.transition = 'opacity .5s cubic-bezier(.4,0,.2,1), transform .5s cubic-bezier(.4,0,.2,1)';
+    observer.observe(el);
+  });
+});
+</script>
+
+</body>
+</html>
